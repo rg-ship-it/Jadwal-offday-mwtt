@@ -432,11 +432,13 @@
     }
   </style>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK (v8 compat CDN) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <script>
-    /* CONFIG PUNYA KAMU (PROJECT: dedy-b7d09) */
+    // ====== FIREBASE CONFIG (PASTIKAN SESUAI PROJECT KAMU) ======
+    // databaseURL harus sama persis seperti di Realtime Database console (biasanya ...firebaseio.com)
     const firebaseConfig = {
       apiKey: "AIzaSyD0gaCXH6ny4EwLwhJhUVAZzS5x1nLjs-s",
       authDomain: "dedy-b7d09.firebaseapp.com",
@@ -505,12 +507,12 @@
       <div class="cuti-table-wrap">
         <table class="cuti-table">
           <thead>
-          <tr>
-            <th>Nama Staff</th>
-            <th>Tanggal Cuti</th>
-            <th>Selesai Cuti</th>
-            <th>Info</th>
-          </tr>
+            <tr>
+              <th>Nama Staff</th>
+              <th>Tanggal Cuti</th>
+              <th>Selesai Cuti</th>
+              <th>Info</th>
+            </tr>
           </thead>
           <tbody id="cutiTableBody"></tbody>
         </table>
@@ -523,8 +525,11 @@
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button id="addRowBtn" class="btn-green">+ Baris</button>
           <button id="addColBtn" class="btn-green">+ Kolom</button>
+
           <button id="removeColBtn" class="btn-danger">🗑 Hapus Kolom</button>
+
           <button id="toggleDeleteSeatBtn" class="btn-amber">🧽 MODE HAPUS: OFF</button>
+
           <button id="resetBaganBtn" class="btn-danger">Reset Bagan</button>
           <button id="exportBaganBtn" class="btn-accent">Export (Copy)</button>
         </div>
@@ -532,7 +537,7 @@
 
       <div class="bagan-wrap">
         <div style="font-size:12px; opacity:.8; margin:0 0 10px;">
-          Grid dinamis — klik seat untuk edit nama.  
+          Grid dinamis — klik seat untuk edit nama.
           <br>Jika <b>MODE HAPUS ON</b>, klik seat → kotak hilang tapi posisi lain tidak geser.
         </div>
         <div class="bagan-board" id="baganBoard"></div>
@@ -551,10 +556,10 @@
       <div class="cuti-table-wrap">
         <table class="cuti-table" id="piketTable">
           <thead>
-          <tr>
-            <th>Hari</th>
-            <th colspan="8">Nama Piket (maks 8 orang / hari)</th>
-          </tr>
+            <tr>
+              <th>Hari</th>
+              <th colspan="8">Nama Piket (maks 8 orang / hari)</th>
+            </tr>
           </thead>
           <tbody id="piketTableBody"></tbody>
         </table>
@@ -652,6 +657,110 @@
 (() => {
   const $ = q => document.querySelector(q);
 
+  // =========================
+  // ✅ GLOBAL FIREBASE SYNC
+  // =========================
+  const GLOBAL_ROOM_ID = "mwtt-main"; // semua user pakai room ini → data sama global
+
+  // ID device biar update gak “ke-loop” (optional)
+  const clientIdKey = "mwtt-client-id";
+  const clientId = localStorage.getItem(clientIdKey) || ("c_" + Math.random().toString(16).slice(2));
+  localStorage.setItem(clientIdKey, clientId);
+
+  const dbRef = firebase.database().ref("offday/" + GLOBAL_ROOM_ID);
+
+  let isApplyingRemote = false;
+  let lastRemoteUpdatedAt = 0;
+  let pushTimer = null;
+
+  function schedulePush() {
+    if (isApplyingRemote) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushNow, 300);
+  }
+
+  function pushNow() {
+    if (isApplyingRemote) return;
+    const payload = {
+      updatedAt: Date.now(),
+      updatedBy: clientId,
+      calendar: store,
+      cuti: cutiStore,
+      bagan: { meta: baganMeta, seats: baganStore },
+      piket: piketStore,
+      lock: { isLocked }
+    };
+    dbRef.set(payload).catch(err => console.error("GLOBAL SAVE ERR:", err));
+  }
+
+  function applyRemote(payload) {
+    if (!payload) return;
+
+    // ignore payload lama
+    const u = Number(payload.updatedAt || 0);
+    if (u && u <= lastRemoteUpdatedAt) return;
+
+    isApplyingRemote = true;
+    try {
+      lastRemoteUpdatedAt = u || lastRemoteUpdatedAt;
+
+      // calendar
+      if (payload.calendar && typeof payload.calendar === "object") {
+        Object.keys(store).forEach(k => delete store[k]);
+        Object.assign(store, payload.calendar);
+        saveStore();
+      }
+
+      // cuti
+      if (Array.isArray(payload.cuti)) {
+        cutiStore.splice(0, cutiStore.length, ...payload.cuti);
+        saveCuti();
+      }
+
+      // bagan
+      if (payload.bagan && typeof payload.bagan === "object") {
+        if (payload.bagan.meta) baganMeta = payload.bagan.meta;
+        if (Array.isArray(payload.bagan.seats)) baganStore = payload.bagan.seats;
+        saveBagan();
+      }
+
+      // piket
+      if (payload.piket && typeof payload.piket === "object") {
+        Object.keys(piketStore).forEach(k => delete piketStore[k]);
+        Object.assign(piketStore, payload.piket);
+        savePiket();
+      }
+
+      // lock state (optional)
+      if (payload.lock && typeof payload.lock.isLocked === "boolean") {
+        isLocked = payload.lock.isLocked;
+        updateLockUI();
+      }
+
+      // rerender sesuai tab yang aktif
+      if (activeFilterType === "CUTI") renderCutiTable();
+      else if (activeFilterType === "BAGAN_VIEW") { renderBagan(); updateDeleteSeatUI(); }
+      else if (activeFilterType === "PIKET") renderPiketTable();
+      else renderCalendar();
+
+    } finally {
+      isApplyingRemote = false;
+    }
+  }
+
+  function startRealtimeSync() {
+    dbRef.on("value", snap => {
+      const payload = snap.val();
+      applyRemote(payload);
+      // console.log("🌍 GLOBAL DATA:", payload);
+    }, err => {
+      console.error("GLOBAL LOAD ERR:", err);
+    });
+  }
+
+  // =========================
+  // APP ORIGINAL LOGIC
+  // =========================
   const WEEKDAYS_ID = ["SENIN","SELASA","RABU","KAMIS","JUMAT","SABTU","MINGGU"];
   const MONTHS_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
@@ -685,29 +794,54 @@
   const lockKey = "offday-lock-state";
   let isLocked = (localStorage.getItem(lockKey) ?? "true") === "true";
 
-  /* ====== STORAGE + GLOBAL ID ====== */
   const storeKey = "offday-v4";
-  const cutiKey  = "cuti-v1";
+  const store = JSON.parse(localStorage.getItem(storeKey) || "{}");
+  const saveStore = () => localStorage.setItem(storeKey, JSON.stringify(store));
+
+  const cutiKey = "cuti-v1";
+  const cutiStore = JSON.parse(localStorage.getItem(cutiKey) || "[]");
+  const saveCuti = () => localStorage.setItem(cutiKey, JSON.stringify(cutiStore));
+
   const baganKey = "bagan-v3";
   const baganMetaKey = "bagan-meta-v1";
-  const piketKey = "piket-v1";
-
-  /* Semua user lihat jadwal yang sama di ID ini */
-  const GLOBAL_ROOM_ID = "mwtt-main";
-
-  const store = JSON.parse(localStorage.getItem(storeKey) || "{}");
-  const cutiStore = JSON.parse(localStorage.getItem(cutiKey) || "[]");
 
   let baganMeta = JSON.parse(localStorage.getItem(baganMetaKey) || "null")
-                  || { rows: 10, cols: 20 };
+               || { rows: 10, cols: 20 };
 
   function BAGAN_ROWS(){ return baganMeta.rows; }
   function BAGAN_COLS(){ return baganMeta.cols; }
   function BAGAN_SIZE(){ return BAGAN_ROWS() * BAGAN_COLS(); }
 
   let baganStore = JSON.parse(localStorage.getItem(baganKey) || "null")
-                  || Array.from({length:BAGAN_SIZE()}, ()=>({name:"", active:true}));
+                 || Array.from({length:BAGAN_SIZE()}, ()=>({name:"", active:true}));
 
+  const saveBagan = () => {
+    localStorage.setItem(baganKey, JSON.stringify(baganStore));
+    localStorage.setItem(baganMetaKey, JSON.stringify(baganMeta));
+  };
+
+  function ensureBaganSize(){
+    const sizeNeeded = BAGAN_SIZE();
+
+    if(baganStore.length < sizeNeeded){
+      baganStore.push(
+        ...Array.from(
+          {length:sizeNeeded-baganStore.length},
+          ()=>({name:"", active:true})
+        )
+      );
+    }
+    if(baganStore.length > sizeNeeded){
+      baganStore = baganStore.slice(0, sizeNeeded);
+    }
+
+    baganStore.forEach(s=>{
+      if(typeof s.active !== "boolean") s.active = true;
+      if(typeof s.name !== "string") s.name = "";
+    });
+  }
+
+  const piketKey = "piket-v1";
   const defaultPiket = {
     SENIN: Array(8).fill(""),
     SELASA: Array(8).fill(""),
@@ -719,78 +853,9 @@
   };
   const safeClone = obj => JSON.parse(JSON.stringify(obj));
   const piketStore = JSON.parse(localStorage.getItem(piketKey) || "null")
-                     || safeClone(defaultPiket);
+    || safeClone(defaultPiket);
+  const savePiket = () => localStorage.setItem(piketKey, JSON.stringify(piketStore));
 
-  /* ====== PUSH KE SERVER (GLOBAL) ====== */
-  function pushToServer() {
-    const payload = {
-      store,
-      cutiStore,
-      baganStore,
-      baganMeta,
-      piketStore
-    };
-    firebase.database()
-      .ref("offday/" + GLOBAL_ROOM_ID)
-      .set(payload)
-      .then(() => console.log("✅ GLOBAL SAVE OK"))
-      .catch(err => console.error("❌ GLOBAL SAVE FAIL:", err));
-  }
-
-  const saveStore = () => {
-    localStorage.setItem(storeKey, JSON.stringify(store));
-    pushToServer();
-  };
-  const saveCuti = () => {
-    localStorage.setItem(cutiKey, JSON.stringify(cutiStore));
-    pushToServer();
-  };
-  const saveBagan = () => {
-    localStorage.setItem(baganKey, JSON.stringify(baganStore));
-    localStorage.setItem(baganMetaKey, JSON.stringify(baganMeta));
-    pushToServer();
-  };
-  const savePiket = () => {
-    localStorage.setItem(piketKey, JSON.stringify(piketStore));
-    pushToServer();
-  };
-
-  /* ====== SYNC DARI SERVER (SAAT LOAD) ====== */
-  async function syncFromServer() {
-    try {
-      const ref = firebase.database().ref("offday/" + GLOBAL_ROOM_ID);
-      const snap = await ref.get();
-
-      if (!snap.exists()) {
-        console.warn("ℹ Belum ada data global, pakai lokal dulu.");
-        return;
-      }
-
-      const data = snap.val() || {};
-      console.log("🌍 GLOBAL DATA:", data);
-
-      // OFFDAY / kalender
-      Object.keys(store).forEach(k => delete store[k]);
-      Object.assign(store, data.store || {});
-
-      // CUTI
-      cutiStore.splice(0, cutiStore.length, ...(data.cutiStore || []));
-
-      // BAGAN
-      if (data.baganMeta) baganMeta = data.baganMeta;
-      if (Array.isArray(data.baganStore)) baganStore = data.baganStore;
-
-      // PIKET
-      Object.keys(piketStore).forEach(k => delete piketStore[k]);
-      Object.assign(piketStore, data.piketStore || {});
-
-      console.log("✅ SYNC GLOBAL OK");
-    } catch (err) {
-      console.error("❌ SYNC GAGAL:", err);
-    }
-  }
-
-  /* ====== UI & LOGIC ====== */
   let view = new Date();
   let activeKey = null;
   let activeFilterType = "ALL";
@@ -814,12 +879,14 @@
   $("#lockBtn").onclick = () => {
     if(!isLocked){
       isLocked = true; updateLockUI();
+      schedulePush(); // global
       toast("Mode terkunci");
       return;
     }
     const pw = prompt("Masukkan password untuk buka edit:");
     if(pw === EDIT_PASSWORD){
       isLocked = false; updateLockUI();
+      schedulePush(); // global
       toast("Edit mode aktif");
     }else toast("Password salah");
   };
@@ -828,14 +895,14 @@
     const y=date.getFullYear();
     const m=String(date.getMonth()+1).padStart(2,"0");
     const d=String(date.getDate()).padStart(2,"0");
-    return `${y}-${m}-${d}`;
+    return y + "-" + m + "-" + d;
   }
 
   function getMonthData(date){
     const y=date.getFullYear(), m=date.getMonth();
     const first=new Date(y,m,1), last=new Date(y,m+1,0);
     const startDay=(first.getDay()+6)%7;
-    return {y,m,startDay,daysInMonth:last.getDate()};
+    return {y:y, m:m, startDay:startDay, daysInMonth:last.getDate()};
   }
 
   function ensureDay(key){
@@ -850,6 +917,7 @@
     }
     while(store[key].entries.length<8) store[key].entries.push({name:"",role:""});
     store[key].entries = store[key].entries.slice(0,8);
+
     store[key].blocked = store[key].blocked || false;
   }
 
@@ -864,7 +932,7 @@
   }
 
   function renderWeekdays(){
-    $("#weekdays").innerHTML = WEEKDAYS_ID.map(d=>`<div>${d}</div>`).join("");
+    $("#weekdays").innerHTML = WEEKDAYS_ID.map(d=>"<div>"+d+"</div>").join("");
   }
 
   function buildCopyText(key){
@@ -873,6 +941,7 @@
       .filter(e=>e.name);
     return entries.length? entries.map(e=>e.name).join("\n") : "";
   }
+
   function refreshCopyBox(){
     if(!activeKey) return;
     $("#copyBox").value = buildCopyText(activeKey);
@@ -881,8 +950,8 @@
   function renderCalendar(){
     const grid=$("#grid");
     const md=getMonthData(view);
-    const {y,m,startDay,daysInMonth}=md;
-    $("#monthLabel").textContent=`${MONTHS_ID[m]} ${y}`;
+    const y=md.y, m=md.m, startDay=md.startDay, daysInMonth=md.daysInMonth;
+    $("#monthLabel").textContent=MONTHS_ID[m]+" "+y;
     grid.innerHTML="";
 
     for(let i=0;i<startDay;i++){
@@ -940,35 +1009,39 @@
         if(entries.length===0){
           miniHtml=
             '<div class="names-mini">'+
-              `<div class="line empty">${typeLabel}: klik untuk isi</div>`+
+              '<div class="line empty">'+typeLabel+': klik untuk isi</div>'+
             '</div>';
         } else{
           const lines=entries.map(e=>{
             const copyText=e.name;
             if(!e.role){
-              return `<div class="line copy-line" data-copy="${copyText}"><span class="nm">${e.name}</span></div>`;
+              return '<div class="line copy-line" data-copy="'+copyText+'">'+
+                        '<span class="nm">'+e.name+'</span>'+
+                      '</div>';
             }
             const color=ROLE_COLOR_MAP[e.role]||"#CBD5E1";
             const dark=isDark(color);
             const text=dark?"#F8FAFC":"#0B0F1D";
-            return `<div class="line copy-line" data-copy="${copyText}">
-                      <span class="nm">${e.name}</span>
-                      <span class="role-pill" style="background:${color}; color:${text}; border-color:rgba(0,0,0,.15)">${e.role}</span>
-                    </div>`;
+            return '<div class="line copy-line" data-copy="'+copyText+'">'+
+                     '<span class="nm">'+e.name+'</span>'+
+                     '<span class="role-pill" style="background:'+color+'; color:'+text+'; border-color:rgba(0,0,0,.15)">'+
+                       e.role+
+                     '</span>'+
+                   '</div>';
           }).join("");
           miniHtml=
             '<div class="names-mini">'+
-              `<div class="line"><b>${typeLabel}</b></div>`+
+              '<div class="line"><b>'+typeLabel+'</b></div>'+
               lines+
             '</div>';
         }
       }
 
       cell.innerHTML=
-        `<div class="date-row">
-           <span>${d}</span>
-           <span class="badge">${isWeekend?"WEEKEND":"WORKDAY"}</span>
-         </div>`+
+        '<div class="date-row">'+
+          '<span>'+d+'</span>'+
+          '<span class="badge">'+(isWeekend?"WEEKEND":"WORKDAY")+'</span>'+
+        '</div>'+
         miniHtml+
         '<div class="dot"></div>';
 
@@ -998,7 +1071,7 @@
     const type=store[key].type||"OFF";
 
     $("#modalTitle").textContent =
-      `Jadwal: ${WEEKDAYS_ID[(date.getDay()+6)%7]}, ${date.getDate()} ${MONTHS_ID[date.getMonth()]} ${date.getFullYear()}`;
+      "Jadwal: "+WEEKDAYS_ID[(date.getDay()+6)%7]+", "+date.getDate()+" "+MONTHS_ID[date.getMonth()]+" "+date.getFullYear();
 
     const isBlocked=store[key].blocked===true;
     $("#modalSub").textContent=isBlocked
@@ -1070,6 +1143,7 @@
       store[key].type=typeSelect.value;
       store[key].off=true;
       saveStore(); refreshCopyBox(); renderCalendar();
+      schedulePush(); // global
     };
 
     refreshCopyBox();
@@ -1085,8 +1159,11 @@
   $("#save").onclick=()=>{
     if(!activeKey) return;
     if(store[activeKey].blocked){
-      saveStore(); closeCalendarModal(); renderCalendar(); return;
+      saveStore(); closeCalendarModal(); renderCalendar();
+      schedulePush();
+      return;
     }
+
     const inputs=[...$("#modalNames").querySelectorAll("input")];
     const selects=[...$("#modalNames").querySelectorAll("select")];
 
@@ -1100,6 +1177,7 @@
     store[activeKey].off=true;
     store[activeKey].type=store[activeKey].type||"OFF";
     saveStore(); closeCalendarModal(); renderCalendar();
+    schedulePush(); // global
   };
 
   $("#deleteOff").onclick=()=>{
@@ -1109,6 +1187,7 @@
     store[activeKey].entries=Array.from({length:8},()=>({name:"",role:""}));
     if(!store[activeKey].blocked) delete store[activeKey];
     saveStore(); closeCalendarModal(); renderCalendar();
+    schedulePush(); // global
   };
 
   $("#toggleBlock").onclick=()=>{
@@ -1122,6 +1201,7 @@
       store[activeKey].type=store[activeKey].type||"OFF";
     }
     saveStore(); closeCalendarModal(); renderCalendar();
+    schedulePush(); // global
   };
 
   $("#copyBtn").onclick = async ()=>{
@@ -1154,12 +1234,12 @@
     cutiStore.forEach((row,idx)=>{
       const tr=document.createElement("tr");
       tr.innerHTML=
-        `<td class="name">${row.name||"-"}</td>`+
-        `<td>${fmtDateID(row.start)}</td>`+
-        `<td>${fmtDateID(row.end)}</td>`+
-        `<td>
-           <button class="info-btn" data-idx="${idx}">Detail</button>`+
-          (!isLocked? `<button class="del-btn" data-del="${idx}">Hapus</button>` : '')+
+        '<td class="name">'+(row.name||"-")+'</td>'+
+        '<td>'+fmtDateID(row.start)+'</td>'+
+        '<td>'+fmtDateID(row.end)+'</td>'+
+        '<td>'+
+          '<button class="info-btn" data-idx="'+idx+'">Detail</button>'+
+          (!isLocked? '<button class="del-btn" data-del="'+idx+'">Hapus</button>' : '')+
         '</td>';
       body.appendChild(tr);
     });
@@ -1170,6 +1250,7 @@
         openCutiModal(idx);
       };
     });
+
     body.querySelectorAll(".del-btn").forEach(btn=>{
       btn.onclick=()=>{
         if(isLocked) return;
@@ -1177,6 +1258,7 @@
         if(confirm("Hapus data CUTI ini?")){
           cutiStore.splice(idx,1);
           saveCuti(); renderCutiTable();
+          schedulePush(); // global
           toast("Data CUTI dihapus");
         }
       };
@@ -1215,6 +1297,7 @@
 
   $("#cutiSaveBtn").onclick=()=>{
     if(isLocked) return;
+
     const data={
       name: $("#cutiName").value.trim(),
       start: $("#cutiStart").value,
@@ -1235,6 +1318,7 @@
     }
 
     saveCuti(); renderCutiTable(); closeCutiModal();
+    schedulePush(); // global
   };
 
   $("#cutiDeleteBtn").onclick=()=>{
@@ -1242,7 +1326,21 @@
     if(confirm("Hapus data CUTI ini?")){
       cutiStore.splice(editingCutiIndex,1);
       saveCuti(); renderCutiTable(); closeCutiModal();
+      schedulePush(); // global
       toast("Data CUTI dihapus");
+    }
+  };
+
+  $("#exportCutiBtn").onclick=async ()=>{
+    const txt = cutiStore.map((r,i)=>(
+      (i+1)+". "+r.name+"\n   "+fmtDateID(r.start)+" → "+fmtDateID(r.end)+"\n   "+(r.info||"-")
+    )).join("\n\n");
+    try{
+      await navigator.clipboard.writeText(txt||"Belum ada data cuti");
+      toast("Data CUTI dicopy");
+    }catch(e){
+      toast("Gagal copy, blok manual");
+      alert(txt);
     }
   };
 
@@ -1262,33 +1360,12 @@
     toast(deleteSeatMode ? "Klik seat untuk hapus (kotak hilang)" : "Mode hapus dimatikan");
   };
 
-  function ensureBaganSize(){
-    const sizeNeeded = BAGAN_SIZE();
-
-    if(baganStore.length < sizeNeeded){
-      baganStore.push(
-        ...Array.from(
-          {length:sizeNeeded-baganStore.length},
-          ()=>({name:"", active:true})
-        )
-      );
-    }
-    if(baganStore.length > sizeNeeded){
-      baganStore = baganStore.slice(0, sizeNeeded);
-    }
-
-    baganStore.forEach(s=>{
-      if(typeof s.active !== "boolean") s.active = true;
-      if(typeof s.name !== "string") s.name = "";
-    });
-  }
-
   function renderBagan(){
     ensureBaganSize();
 
     const board=$("#baganBoard");
     const cols = BAGAN_COLS();
-    board.style.gridTemplateColumns = `repeat(${cols}, 90px)`;
+    board.style.gridTemplateColumns = "repeat("+cols+", 90px)";
     board.innerHTML="";
 
     baganStore.forEach((seat,i)=>{
@@ -1298,11 +1375,12 @@
       div.className =
         "seat" +
         (!isActive ? " hidden" : (!seat.name ? " empty" : ""));
+
       div.draggable = !isLocked && isActive;
       div.dataset.i=i;
 
       div.innerHTML = isActive
-        ? `<small>${seatLabel(i)}</small>${seat.name || "-"}`
+        ? "<small>"+seatLabel(i)+"</small>"+(seat.name || "-")
         : "";
 
       div.addEventListener("click", ()=>{
@@ -1322,6 +1400,7 @@
           baganStore[i].active = false;
           saveBagan();
           renderBagan();
+          schedulePush(); // global
           toast("Seat "+seatLabel(i)+" dihapus");
           return;
         }
@@ -1332,6 +1411,7 @@
         baganStore[i].active = true;
         saveBagan();
         renderBagan();
+        schedulePush(); // global
       });
 
       div.addEventListener("dragstart", e=>{
@@ -1358,6 +1438,7 @@
         baganStore[from]=baganStore[to];
         baganStore[to]=tmp;
         saveBagan(); renderBagan();
+        schedulePush(); // global
         toast("Swap seat "+seatLabel(from)+" ↔ "+seatLabel(to));
       });
 
@@ -1371,16 +1452,20 @@
     ensureBaganSize();
     saveBagan();
     renderBagan();
+    schedulePush(); // global
     toast("Baris ditambah. Total: "+baganMeta.rows);
   };
+
   $("#addColBtn").onclick=()=>{
     if(isLocked){ toast("Terkunci. Tidak bisa tambah kolom."); return; }
     baganMeta.cols += 1;
     ensureBaganSize();
     saveBagan();
     renderBagan();
+    schedulePush(); // global
     toast("Kolom ditambah. Total: "+baganMeta.cols);
   };
+
   $("#removeColBtn").onclick = () => {
     if (isLocked) { toast("Terkunci. Tidak bisa hapus kolom."); return; }
 
@@ -1389,7 +1474,7 @@
     if (cols <= 1) { toast("Kolom minimal 1"); return; }
 
     const input = prompt(
-      `Mau hapus kolom ke berapa?\n\nTotal kolom sekarang: ${cols}\nIsi angka 1 - ${cols}`,
+      "Mau hapus kolom ke berapa?\n\nTotal kolom sekarang: "+cols+"\nIsi angka 1 - "+cols,
       String(cols)
     );
     if (input === null) return;
@@ -1400,7 +1485,7 @@
       return;
     }
 
-    if (!confirm(`Yakin hapus kolom ke-${colToRemove}?\nSemua nama di kolom ini akan hilang.`)) return;
+    if (!confirm("Yakin hapus kolom ke-"+colToRemove+"?\nSemua nama di kolom ini akan hilang.")) return;
 
     const oldCols = cols;
     const removeIndexInRow = colToRemove - 1;
@@ -1415,19 +1500,23 @@
     ensureBaganSize();
     saveBagan();
     renderBagan();
-    toast(`Kolom ke-${colToRemove} dihapus. Total kolom: ${baganMeta.cols}`);
+    schedulePush(); // global
+    toast("Kolom ke-"+colToRemove+" dihapus. Total kolom: "+baganMeta.cols);
   };
+
   $("#resetBaganBtn").onclick=()=>{
     if(isLocked){ toast("Terkunci. Tidak bisa reset BAGAN."); return; }
     if(confirm("Reset BAGAN? Semua nama hilang & seat yang dihapus muncul lagi.")){
       ensureBaganSize();
       for(let i=0;i<BAGAN_SIZE();i++) baganStore[i]={name:"", active:true};
       saveBagan(); renderBagan();
+      schedulePush(); // global
       toast("BAGAN direset");
     }
   };
+
   $("#exportBaganBtn").onclick=async ()=>{
-    const lines = baganStore.map((s,i)=>`${seatLabel(i)}: ${s.active===false ? "[DELETED]" : (s.name||"-")}`);
+    const lines = baganStore.map((s,i)=>seatLabel(i)+": "+(s.active===false ? "[DELETED]" : (s.name||"-")));
     const txt = lines.join("\n");
     try{
       await navigator.clipboard.writeText(txt);
@@ -1477,11 +1566,12 @@
         const day = el.dataset.day;
         const i = Number(el.dataset.i);
         const old = piketStore[day][i] || "";
-        const nm = prompt(`Nama piket ${day} slot ${i+1}:`, old);
+        const nm = prompt("Nama piket " + day + " slot " + (i+1) + ":", old);
         if(nm===null) return;
         piketStore[day][i] = nm.trim();
         savePiket();
         renderPiketTable();
+        schedulePush(); // global
       };
     });
   }
@@ -1494,15 +1584,17 @@
       });
       savePiket();
       renderPiketTable();
+      schedulePush(); // global
       toast("PIKET direset");
     }
   };
+
   $("#exportPiketBtn").onclick = async ()=>{
     const days = ["SENIN","SELASA","RABU","KAMIS","JUMAT","SABTU","MINGGU"];
     let txt = "";
     days.forEach(d=>{
       const list = (piketStore[d]||[]).filter(n=>String(n).trim());
-      txt += `${d}:\n` + (list.length ? list.map(x=>"- "+x).join("\n") : "- (kosong)") + "\n\n";
+      txt += d + ":\n" + (list.length ? list.map(x=>"- "+x).join("\n") : "- (kosong)") + "\n\n";
     });
 
     try{
@@ -1578,9 +1670,10 @@
   $("#clear").onclick=()=>{
     if(isLocked){ toast("Terkunci. Tidak bisa reset."); return; }
     const md=getMonthData(view);
-    const prefix = `${md.y}-${String(md.m+1).padStart(2,"0")}`;
+    const prefix = md.y+"-"+String(md.m+1).padStart(2,"0");
     Object.keys(store).forEach(k=>{ if(k.startsWith(prefix)) delete store[k]; });
     saveStore(); renderCalendar();
+    schedulePush(); // global
   };
 
   function parseNamesFromPaste(text){
@@ -1618,7 +1711,7 @@
 
     const listP1=shuffle(namesP1), listP2=shuffle(namesP2);
     const md=getMonthData(view);
-    const {y,m,daysInMonth}=md;
+    const y=md.y, m=md.m, daysInMonth=md.daysInMonth;
 
     let eligibleP1=[], eligibleP2=[];
     for(let d=1; d<=daysInMonth; d++){
@@ -1646,27 +1739,34 @@
         }
         if(!any) break;
       }
-      return {filled, remaining:namesList.length-idx};
+      return {filled:filled, remaining:namesList.length-idx};
     }
 
     const r1=fillPeriod(listP1, eligibleP1);
     const r2=fillPeriod(listP2, eligibleP2);
     saveStore(); renderCalendar();
-    toast(`P1 masuk ${r1.filled} | P2 masuk ${r2.filled}`);
+    schedulePush(); // global
+    toast("P1 masuk "+r1.filled+" | P2 masuk "+r2.filled);
   }
   $("#bulkImport").onclick=bulkImportNames;
 
-  window.addEventListener("load", async () => {
+  window.addEventListener("load", () => {
     updateLockUI();
     initTopTabs();
     renderWeekdays();
-
-    await syncFromServer();   // ambil data global dulu
-    ensureBaganSize();
-
     renderCalendar();
     setActiveTab("ALL");
     updateDeleteSeatUI();
+
+    // ✅ start realtime global sync
+    startRealtimeSync();
+
+    // optional: kalau database kosong, push cache lokal pertama kali
+    setTimeout(() => {
+      dbRef.once("value").then(snap => {
+        if (!snap.exists()) pushNow();
+      }).catch(()=>{});
+    }, 500);
   });
 })();
 </script>
