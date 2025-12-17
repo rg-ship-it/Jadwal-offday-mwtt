@@ -994,6 +994,37 @@
       color:#FFEAEA;
       box-shadow:0 6px 20px rgba(255, 100, 100, 0.45);
     }
+
+    /* ===== MODAL PASSWORD RESET ===== */
+    .password-modal .modal {
+      width: min(400px, 90%);
+      grid-template-columns: 1fr;
+    }
+    
+    .password-input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      font-size: 14px;
+      margin: 10px 0;
+      letter-spacing: 1px;
+    }
+    
+    .password-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+    }
+    
+    .password-hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 5px;
+      text-align: center;
+    }
   </style>
 
   <!-- Firebase SDK (v8 compat CDN) -->
@@ -1123,7 +1154,7 @@
           <thead>
             <tr>
               <th>Hari</th>
-              <th colspan="8">PIKET SHIF PAGI</th>
+              <th colspan="8">⬇️PIKET SHIF PAGI⬇️</th>
             </tr>
           </thead>
           <tbody id="piketTableBody"></tbody>
@@ -1178,7 +1209,7 @@
       <div class="catatan-container">
         <!-- Form Input Catatan -->
         <div class="catatan-form">
-          <h3>MASUKAN NAMA STAFF</h3>
+          <h3>⬇️MASUKAN NAMA STAFF⬇️</h3>
           <form id="catatanForm">
             <div class="form-row">
               <input type="text" id="catatanTitle" placeholder="Nama Staff" required>
@@ -1284,6 +1315,25 @@
           <div class="right-actions">
             <button id="cutiCancelBtn">Batal</button>
             <button id="cutiSaveBtn" class="btn-green">Simpan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PASSWORD RESET -->
+  <div class="modal-backdrop password-modal" id="passwordBackdrop">
+    <div class="modal">
+      <div>
+        <h3 id="passwordModalTitle">Verifikasi Password</h3>
+        <div class="sub" id="passwordModalSub">Masukkan password untuk melanjutkan</div>
+
+        <input type="password" id="passwordInput" class="password-input" placeholder="Masukkan password..." autocomplete="off" />
+
+        <div class="modal-actions">
+          <div class="right-actions">
+            <button id="passwordCancelBtn">Batal</button>
+            <button id="passwordConfirmBtn" class="btn-green">Verifikasi</button>
           </div>
         </div>
       </div>
@@ -1438,6 +1488,10 @@
   const lockKey = "offday-lock-state";
   let isLocked = (localStorage.getItem(lockKey) ?? "true") === "true";
 
+  // ===== VARIABLES UNTUK MODAL PASSWORD =====
+  let passwordCallback = null;
+  let resetPanelName = "";
+
   const storeKey = "offday-v4";
   const store = JSON.parse(localStorage.getItem(storeKey) || "{}");
   const saveStore = () => localStorage.setItem(storeKey, JSON.stringify(store));
@@ -1578,23 +1632,114 @@
     }
   }
 
+  // ===== FUNGSI MODAL PASSWORD =====
+  function openPasswordModal(title, sub, callback, panelName = "") {
+    resetPanelName = panelName;
+    passwordCallback = callback;
+    $("#passwordModalTitle").textContent = title;
+    $("#passwordModalSub").textContent = sub;
+    $("#passwordInput").value = "";
+    $("#passwordBackdrop").style.display = "grid";
+    setTimeout(() => $("#passwordInput").focus(), 100);
+  }
+
+  function closePasswordModal() {
+    $("#passwordBackdrop").style.display = "none";
+    passwordCallback = null;
+    resetPanelName = "";
+  }
+
+  $("#passwordCancelBtn").onclick = closePasswordModal;
+  $("#passwordConfirmBtn").onclick = () => {
+    const input = $("#passwordInput").value.trim();
+    if (!input) {
+      toast("Password tidak boleh kosong");
+      return;
+    }
+
+    if (input === EDIT_PASSWORD) {
+      if (passwordCallback) {
+        passwordCallback();
+      }
+      closePasswordModal();
+    } else {
+      toast("Password salah!");
+      $("#passwordInput").value = "";
+      $("#passwordInput").focus();
+    }
+  };
+
+  // Handle Enter key in password modal
+  $("#passwordInput").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      $("#passwordConfirmBtn").click();
+    }
+  });
+
   function updateLockUI(){
     const b=$("#lockBtn");
     b.textContent = isLocked ? "🔒 TERKUNCI" : "🔓 EDIT MODE";
     b.className = isLocked ? "btn-amber" : "btn-green";
     localStorage.setItem(lockKey, String(isLocked));
     
-    // Sembunyikan tombol tambah
-    $("#addCutiBtn").style.display = isLocked ? "none" : "inline-block";
-    $("#addCatatanBtn").style.display = isLocked ? "none" : "inline-block";
+    // Sembunyikan tombol tambah dan reset saat terkunci
+    const buttonsToHide = [
+      "#addCutiBtn",
+      "#addCatatanBtn",
+      "#resetCutiBtn",
+      "#resetBaganBtn",
+      "#resetPiketBtn",
+      "#resetCsBtn",
+      "#resetCatatanBtn",
+      "#addCsBtn",
+      "#addRowBtn",
+      "#addColBtn",
+      "#removeColBtn",
+      "#toggleDeleteSeatBtn",
+      "#clear",
+      "#bulkImport"
+    ];
     
-    // Sembunyikan tombol reset di semua panel
-    $("#resetCutiBtn").style.display = isLocked ? "none" : "inline-block";
-    $("#resetBaganBtn").style.display = isLocked ? "none" : "inline-block";
-    $("#resetPiketBtn").style.display = isLocked ? "none" : "inline-block";
-    $("#resetCsBtn").style.display = isLocked ? "none" : "inline-block";
-    $("#resetCatatanBtn").style.display = isLocked ? "none" : "inline-block";
+    buttonsToHide.forEach(selector => {
+      const btn = $(selector);
+      if (btn) btn.style.display = isLocked ? "none" : "inline-block";
+    });
+
+    // Render ulang panel aktif untuk update tombol di dalamnya
+    reRenderActivePanel();
   }
+
+  function reRenderActivePanel() {
+    if (activeFilterType === "CUTI") renderCutiTable();
+    else if (activeFilterType === "BAGAN_VIEW") { renderBagan(); updateDeleteSeatUI(); }
+    else if (activeFilterType === "PIKET") renderPiketTable();
+    else if (activeFilterType === "CS_MAWAROTO") renderCSTable();
+    else if (activeFilterType === "CATATAN") renderCatatanList();
+    else renderCalendar();
+  }
+
+  // ===== FUNGSI LOCK/UNLOCK =====
+  $("#lockBtn").onclick = () => {
+    if (!isLocked) {
+      // Jika sedang tidak terkunci, kunci langsung
+      isLocked = true;
+      updateLockUI();
+      schedulePush();
+      toast("Mode terkunci");
+    } else {
+      // Jika terkunci, minta password untuk buka
+      openPasswordModal(
+        "Buka Mode Edit",
+        "Masukkan password untuk mengaktifkan mode edit",
+        () => {
+          isLocked = false;
+          updateLockUI();
+          schedulePush();
+          toast("Edit mode aktif");
+        }
+      );
+    }
+  };
 
   function ymd(date){
     const y=date.getFullYear();
@@ -2056,30 +2201,27 @@
     }
   };
 
-  // ===== FUNGSI RESET DENGAN PASSWORD =====
-  function askResetPassword(panelName) {
-    const password = prompt(`Masukkan password untuk reset ${panelName}:`);
-    return password === EDIT_PASSWORD;
-  }
-
+  // ===== TOMBOL RESET DENGAN PASSWORD =====
   $("#resetCutiBtn").onclick = () => {
     if (isLocked) {
       toast("Terkunci. Tidak bisa reset CUTI.");
       return;
     }
     
-    if (!askResetPassword("CUTI")) {
-      toast("Password salah.");
-      return;
-    }
-    
-    if (confirm("Reset semua data CUTI? Tindakan ini tidak dapat dikembalikan.")) {
-      cutiStore.length = 0;
-      saveCuti();
-      renderCutiTable();
-      schedulePush();
-      toast("Semua data CUTI direset.");
-    }
+    openPasswordModal(
+      "Reset Data CUTI",
+      "Masukkan password untuk reset semua data CUTI",
+      () => {
+        if (confirm("Reset semua data CUTI? Tindakan ini tidak dapat dikembalikan.")) {
+          cutiStore.length = 0;
+          saveCuti();
+          renderCutiTable();
+          schedulePush();
+          toast("Semua data CUTI direset.");
+        }
+      },
+      "CUTI"
+    );
   };
 
   function seatLabel(i){ return String(i + 1); }
@@ -2248,18 +2390,20 @@
       return;
     }
     
-    if (!askResetPassword("BAGAN")) {
-      toast("Password salah.");
-      return;
-    }
-    
-    if (confirm("Reset BAGAN? Semua nama hilang & seat yang dihapus muncul lagi.")) {
-      ensureBaganSize();
-      for(let i=0;i<BAGAN_SIZE();i++) baganStore[i]={name:"", active:true};
-      saveBagan(); renderBagan();
-      schedulePush();
-      toast("BAGAN direset");
-    }
+    openPasswordModal(
+      "Reset BAGAN",
+      "Masukkan password untuk reset semua data BAGAN",
+      () => {
+        if (confirm("Reset BAGAN? Semua nama hilang & seat yang dihapus muncul lagi.")) {
+          ensureBaganSize();
+          for(let i=0;i<BAGAN_SIZE();i++) baganStore[i]={name:"", active:true};
+          saveBagan(); renderBagan();
+          schedulePush();
+          toast("BAGAN direset");
+        }
+      },
+      "BAGAN"
+    );
   };
 
   $("#exportBaganBtn").onclick=async ()=>{
@@ -2329,20 +2473,22 @@
       return;
     }
     
-    if (!askResetPassword("PIKET")) {
-      toast("Password salah.");
-      return;
-    }
-    
-    if (confirm("Reset semua jadwal PIKET?")) {
-      Object.keys(defaultPiket).forEach(d=>{
-        piketStore[d] = Array(8).fill("");
-      });
-      savePiket();
-      renderPiketTable();
-      schedulePush();
-      toast("PIKET direset");
-    }
+    openPasswordModal(
+      "Reset PIKET",
+      "Masukkan password untuk reset semua jadwal PIKET",
+      () => {
+        if (confirm("Reset semua jadwal PIKET?")) {
+          Object.keys(defaultPiket).forEach(d=>{
+            piketStore[d] = Array(8).fill("");
+          });
+          savePiket();
+          renderPiketTable();
+          schedulePush();
+          toast("PIKET direset");
+        }
+      },
+      "PIKET"
+    );
   };
 
   $("#exportPiketBtn").onclick = async ()=>{
@@ -2545,18 +2691,20 @@
       return;
     }
     
-    if (!askResetPassword("CS MAWAROTO")) {
-      toast("Password salah.");
-      return;
-    }
-    
-    if (confirm("Reset data CS MAWAROTO?")) {
-      csStore.splice(0, csStore.length, ...csDefault.slice());
-      saveCS();
-      renderCSTable();
-      schedulePush();
-      toast("CS direset");
-    }
+    openPasswordModal(
+      "Reset CS MAWAROTO",
+      "Masukkan password untuk reset data CS MAWAROTO",
+      () => {
+        if (confirm("Reset data CS MAWAROTO?")) {
+          csStore.splice(0, csStore.length, ...csDefault.slice());
+          saveCS();
+          renderCSTable();
+          schedulePush();
+          toast("CS direset");
+        }
+      },
+      "CS MAWAROTO"
+    );
   };
 
   $("#exportCsBtn").onclick = async () => {
@@ -2598,8 +2746,8 @@
         <div class="catatan-footer">
           <div class="catatan-date">${catatan.date || ""}</div>
           <div class="catatan-actions">
-            <button class="catatan-btn edit" data-index="${idx}">Edit</button>
-            <button class="catatan-btn delete" data-index="${idx}">Hapus</button>
+            ${!isLocked ? `<button class="catatan-btn edit" data-index="${idx}">Edit</button>` : ''}
+            ${!isLocked ? `<button class="catatan-btn delete" data-index="${idx}">Hapus</button>` : ''}
           </div>
         </div>
       `;
@@ -2721,18 +2869,20 @@
       return;
     }
     
-    if (!askResetPassword("CATATAN")) {
-      toast("Password salah.");
-      return;
-    }
-    
-    if (confirm("Reset semua catatan? Tindakan ini tidak dapat dikembalikan.")) {
-      catatanStore.length = 0;
-      saveCatatan();
-      renderCatatanList();
-      schedulePush();
-      toast("Semua catatan direset.");
-    }
+    openPasswordModal(
+      "Reset Catatan",
+      "Masukkan password untuk reset semua catatan",
+      () => {
+        if (confirm("Reset semua catatan? Tindakan ini tidak dapat dikembalikan.")) {
+          catatanStore.length = 0;
+          saveCatatan();
+          renderCatatanList();
+          schedulePush();
+          toast("Semua catatan direset.");
+        }
+      },
+      "CATATAN"
+    );
   };
 
   $("#exportCatatanBtn").onclick = async () => {
