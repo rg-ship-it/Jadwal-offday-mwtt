@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="id">
 <head>
@@ -36,6 +35,7 @@
       padding:0;
       overflow-x:hidden;
       position:relative;
+      user-select:none;
     }
 
     body::before{
@@ -65,14 +65,11 @@
       position: fixed;
       inset: 0;
       background-image: 
-        /* Bunga mawar pattern - transparan merah */
         url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50,30 Q60,20 70,30 Q80,40 70,50 Q60,60 50,50 Q40,60 30,50 Q20,40 30,30 Q40,20 50,30' fill='rgba(139,0,0,0.15)'/%3E%3Cpath d='M50,35 Q55,30 60,35 Q65,40 60,45 Q55,50 50,45 Q45,50 40,45 Q35,40 40,35 Q45,30 50,35' fill='rgba(178,34,34,0.1)'/%3E%3C/svg%3E"),
         url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40,25 Q48,18 56,25 Q64,32 56,40 Q48,48 40,40 Q32,48 24,40 Q16,32 24,25 Q32,18 40,25' fill='rgba(165,42,42,0.12)'/%3E%3C/svg%3E"),
         url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30,18 Q36,12 42,18 Q48,24 42,30 Q36,36 30,30 Q24,36 18,30 Q12,24 18,18 Q24,12 30,18' fill='rgba(139,0,0,0.08)'/%3E%3C/svg%3E"),
-        /* Tambahan pattern bunga kecil */
         url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20,12 Q24,8 28,12 Q32,16 28,20 Q24,24 20,20 Q16,24 12,20 Q8,16 12,12 Q16,8 20,12' fill='rgba(178,34,34,0.06)'/%3E%3C/svg%3E"),
         url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15,9 Q18,6 21,9 Q24,12 21,15 Q18,18 15,15 Q12,18 9,15 Q6,12 9,9 Q12,6 15,9' fill='rgba(165,42,42,0.05)'/%3E%3C/svg%3E"),
-        /* Petal kecil */
         url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,6 Q12,4 14,6 Q16,8 14,10 Q12,12 10,10 Q8,12 6,10 Q4,8 6,6 Q8,4 10,6' fill='rgba(139,0,0,0.04)'/%3E%3C/svg%3E");
       
       background-size: 
@@ -96,15 +93,13 @@
         80% 90%;
       
       background-repeat: no-repeat;
-      opacity: 0.4; /* Transparan */
+      opacity: 0.4;
       z-index: -2;
       pointer-events: none;
       
-      /* Animasi lembut untuk bunga-bunga */
       animation: floatRoses 30s infinite ease-in-out;
     }
 
-    /* Animasi mengambang untuk bunga mawar */
     @keyframes floatRoses {
       0%, 100% {
         transform: translate(0, 0) rotate(0deg);
@@ -127,6 +122,7 @@
       display:grid;
       gap:14px;
       padding:16px;
+      overflow-x:auto;
     }
 
     .header{
@@ -135,6 +131,7 @@
       box-shadow:var(--shadow); backdrop-filter:blur(10px);
       position:sticky; top:0; z-index:10;
       gap:10px; flex-wrap:wrap;
+      min-width:1200px;
     }
     .brand{display:flex; gap:10px; align-items:center;}
     .logo{
@@ -188,6 +185,7 @@
       box-shadow:var(--shadow); backdrop-filter:blur(10px); padding:12px;
       display:flex; flex-direction:column;
       min-height:calc(100vh - 130px);
+      min-width:1200px;
     }
 
     .cal-head{
@@ -207,7 +205,6 @@
     }
     .cal-head button:hover{background:rgba(255,255,255,.12)}
 
-    /* ===== WEEKDAYS HEADER - MERAH METALIK ===== */
     .weekdays{
       display:grid !important;
       grid-template-columns: repeat(7, 1fr) !important;
@@ -219,16 +216,14 @@
       text-align: center !important;
       border-radius: 8px !important;
       margin-bottom: 4px !important;
-
-      /* Red metallic gradient background */
       background: linear-gradient(145deg,
-        #8B0000 0%,      /* Dark Red/Maroon */
-        #A52A2A 25%,     /* Brownish Red */
-        #B22222 50%,     /* Firebrick */
-        #8B0000 75%,     /* Dark Red kembali */
-        #4A0000 100%     /* Very Dark Red ke Hitam */
+        #8B0000 0%,
+        #A52A2A 25%,
+        #B22222 50%,
+        #8B0000 75%,
+        #4A0000 100%
       ) !important;
-      color: #FFD700 !important;  /* Gold text untuk kontras */
+      color: #FFD700 !important;
       border: 1px solid rgba(255, 215, 0, 0.6) !important;
       box-shadow: 
         inset 0 1px 0 rgba(255, 255, 255, 0.4),
@@ -239,7 +234,6 @@
         0 0 5px rgba(255, 215, 0, 0.5);
     }
 
-    /* ===== KALENDER GRID ===== */
     .grid{
       display:grid;
       grid-template-columns:repeat(7,1fr);
@@ -248,6 +242,8 @@
       flex:1;
       grid-auto-rows: minmax(140px, auto);
       align-items: stretch;
+      min-width:1200px;
+      overflow-x:auto;
     }
 
     .day{
@@ -256,11 +252,11 @@
       border-radius:12px;
       padding:6px;
       background: linear-gradient(145deg,
-        #8B0000 0%,      /* Dark Red/Maroon */
-        #A52A2A 25%,     /* Brownish Red */
-        #B22222 50%,     /* Firebrick */
-        #8B0000 75%,     /* Dark Red kembali */
-        #4A0000 100%     /* Very Dark Red ke Hitam */
+        #8B0000 0%,
+        #A52A2A 25%,
+        #B22222 50%,
+        #8B0000 75%,
+        #4A0000 100%
       );
       border:1px solid rgba(255, 215, 0, 0.5);
       box-shadow:
@@ -297,7 +293,6 @@
         0 0 12px rgba(255, 215, 0, 0.6);
     }
 
-    /* ===== BADGE WORKDAY & WEEKEND - MERAH METALIK ===== */
     .badge {
       font-size: 9px;
       padding: 2px 6px;
@@ -306,13 +301,13 @@
       text-transform: uppercase;
       letter-spacing: .2px;
       background: linear-gradient(145deg,
-        #8B0000 0%,      /* Dark Red/Maroon */
-        #A52A2A 25%,     /* Brownish Red */
-        #B22222 50%,     /* Firebrick */
-        #8B0000 75%,     /* Dark Red kembali */
-        #4A0000 100%     /* Very Dark Red ke Hitam */
+        #8B0000 0%,
+        #A52A2A 25%,
+        #B22222 50%,
+        #8B0000 75%,
+        #4A0000 100%
       );
-      color: #FFD700;    /* Gold text untuk kontras */
+      color: #FFD700;
       border: 1px solid rgba(139, 0, 0, 0.7);
       text-shadow: 
         0 1px 0 rgba(0, 0, 0, 0.8),
@@ -325,30 +320,28 @@
       overflow: hidden;
     }
 
-    /* Badge untuk WEEKEND - sedikit lebih terang */
     .day.weekend .badge {
       background: linear-gradient(145deg,
-        #A52A2A 0%,      /* Brown Red */
-        #C04040 25%,     /* Lighter Red */
-        #D2691E 50%,     /* Chocolate */
-        #A52A2A 75%,     /* Brown Red kembali */
-        #5D1E1E 100%     /* Dark Brownish Red */
+        #A52A2A 0%,
+        #C04040 25%,
+        #D2691E 50%,
+        #A52A2A 75%,
+        #5D1E1E 100%
       );
-      color: #FFE4B5;    /* Moccasin - lebih terang */
+      color: #FFE4B5;
       border: 1px solid rgba(210, 105, 30, 0.7);
       text-shadow: 
         0 1px 0 rgba(0, 0, 0, 0.8),
         0 0 6px rgba(255, 228, 181, 0.6);
     }
 
-    /* ===== HARI BLOCKED - WARNA EMAS ===== */
     .day.blocked {
       background: linear-gradient(145deg,
-        #FFD700 0%,      /* Gold */
-        #FFC800 25%,     /* Slightly darker gold */
-        #FFB900 50%,     /* More darker gold */
-        #FFAA00 75%,     /* Even more darker gold */
-        #FF9B00 100%     /* Dark gold */
+        #FFD700 0%,
+        #FFC800 25%,
+        #FFB900 50%,
+        #FFAA00 75%,
+        #FF9B00 100%
       ) !important;
       border-color: rgba(255, 200, 0, 0.8) !important;
       color: #000000 !important;
@@ -367,11 +360,11 @@
 
     .day.blocked .badge {
       background: linear-gradient(145deg,
-        #000000 0%,      /* Black */
-        #333333 25%,     /* Dark gray */
-        #666666 50%,     /* Gray */
-        #333333 75%,     /* Dark gray kembali */
-        #000000 100%     /* Black */
+        #000000 0%,
+        #333333 25%,
+        #666666 50%,
+        #333333 75%,
+        #000000 100%
       ) !important;
       color: #FFD700 !important;
       border: 1px solid rgba(0, 0, 0, 0.7) !important;
@@ -398,15 +391,14 @@
         0 0 12px rgba(0, 0, 0, 0.8) !important;
     }
 
-    /* ===== HARI OFFDAY - MERAH MARUN GELAP METALIK ===== */
     .day.off {
       background: linear-gradient(145deg,
-        #4A0000 0%,      /* Very Dark Red */
-        #5A0000 20%,     /* Dark Red 2 */
-        #6B0000 40%,     /* Dark Red 3 */
-        #8B0000 60%,     /* Dark Red/Maroon */
-        #A52A2A 80%,     /* Brownish Red */
-        #8B0000 100%     /* Dark Red kembali */
+        #4A0000 0%,
+        #5A0000 20%,
+        #6B0000 40%,
+        #8B0000 60%,
+        #A52A2A 80%,
+        #8B0000 100%
       ) !important;
       
       border: 1px solid rgba(255, 100, 100, 0.5) !important;
@@ -416,7 +408,7 @@
         inset 0 -6px 12px rgba(0, 0, 0, 0.5),
         0 4px 12px rgba(139, 0, 0, 0.5) !important;
       
-      color: #FFFFFF !important; /* Teks putih untuk hari offday */
+      color: #FFFFFF !important;
     }
 
     .day.off:hover {
@@ -427,30 +419,28 @@
         0 6px 16px rgba(139, 0, 0, 0.6) !important;
     }
 
-    /* Teks pada hari offday - PUTIH */
     .day.off .date-row {
       background: rgba(255, 255, 255, 0.15) !important;
-      color: #FFFFFF !important; /* Teks putih */
+      color: #FFFFFF !important;
       border: 1px solid rgba(255, 200, 200, 0.3) !important;
     }
 
     .day.off .date-row span:first-child {
-      color: #FFFFFF !important; /* Teks putih */
+      color: #FFFFFF !important;
       text-shadow: 
         0 0 5px rgba(255, 180, 180, 0.8),
         0 0 10px rgba(255, 100, 100, 0.6) !important;
     }
 
-    /* Badge untuk offday */
     .day.off .badge {
       background: linear-gradient(145deg,
-        #8B0000 0%,      /* Dark Red/Maroon */
-        #A52A2A 25%,     /* Brownish Red */
-        #B22222 50%,     /* Firebrick */
-        #8B0000 75%,     /* Dark Red kembali */
-        #4A0000 100%     /* Very Dark Red ke Hitam */
+        #8B0000 0%,
+        #A52A2A 25%,
+        #B22222 50%,
+        #8B0000 75%,
+        #4A0000 100%
       ) !important;
-      color: #FFD700 !important;    /* Gold text untuk kontras */
+      color: #FFD700 !important;
       border: 1px solid rgba(139, 0, 0, 0.7) !important;
       text-shadow: 
         0 1px 0 rgba(0, 0, 0, 0.8),
@@ -461,11 +451,10 @@
         0 2px 4px rgba(0, 0, 0, 0.4) !important;
     }
 
-    /* Nama-nama di dalam hari offday - PUTIH */
     .day.off .names-mini .line {
       background: rgba(255, 255, 255, 0.1) !important;
       border: 1px solid rgba(255, 180, 180, 0.2) !important;
-      color: #FFFFFF !important; /* Teks putih */
+      color: #FFFFFF !important;
       text-shadow: 
         0 1px 0 rgba(0, 0, 0, 0.8),
         0 0 3px rgba(255, 255, 255, 0.5) !important;
@@ -475,30 +464,24 @@
       background: rgba(255, 255, 255, 0.2) !important;
     }
 
-    /* Nama staff di hari offday menjadi PUTIH */
     .day.off .names-mini .nm {
-      color: #FFFFFF !important; /* Teks putih */
+      color: #FFFFFF !important;
       font-weight: 900 !important;
       text-shadow: 
         0 1px 0 rgba(0, 0, 0, 0.8),
         0 0 3px rgba(255, 255, 255, 0.5) !important;
     }
 
-    /* Role pill di hari offday - WARNA TETAP TIDAK BERUBAH */
     .day.off .role-pill {
       border-color: rgba(255, 200, 200, 0.5) !important;
-      /* Warna teks dan background tetap sesuai dengan ROLE_OPTIONS */
-      text-shadow: none !important;
     }
 
-    /* Teks kosong di hari offday */
     .day.off .names-mini .empty {
-      color: rgba(255, 255, 255, 0.7) !important; /* Putih transparan */
+      color: rgba(255, 255, 255, 0.7) !important;
       border: 1px dashed rgba(255, 200, 200, 0.4) !important;
       text-shadow: none !important;
     }
 
-    /* Dot indikator untuk offday - merah marun */
     .day.off .dot {
       background: #8B0000 !important;
       box-shadow: 
@@ -506,7 +489,6 @@
         0 0 10px rgba(139, 0, 0, 0.8) !important;
     }
 
-    /* Efek hover pada hari offday dengan background bunga mawar */
     .day.off:hover::before {
       background: 
         radial-gradient(circle at center, 
@@ -533,13 +515,11 @@
       border-color:#c8b9ff; color:#16092a;
     }
 
-    /* Container nama yang lebih rapi */
     .names-mini{
       font-size:11.5px; line-height:1.2; font-weight:800;
       display:grid; gap:3px; margin-top:2px; flex:1; overflow:hidden;
     }
 
-    /* Baris nama yang rapi seperti Excel */
     .names-mini .line{
       display:flex; align-items:center; gap:4px; padding:3px 4px; border-radius:5px;
       background:rgba(255, 255, 255, 0.15); border:1px solid rgba(255, 215, 0, 0.3);
@@ -550,16 +530,14 @@
         0 0 3px rgba(255, 215, 0, 0.5);
     }
     
-    /* Nama staff - TEKS EMAS UNTUK HARI KERJA */
     .names-mini .nm{
       flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
-      color: #FFD700; /* Emas untuk hari kerja */
+      color: #FFD700;
       text-shadow: 
         0 1px 0 rgba(0, 0, 0, 0.8),
         0 0 3px rgba(255, 215, 0, 0.5);
     }
 
-    /* Pill role lebih kecil */
     .role-pill{
       font-size:8.5px; font-weight:900; padding:1px 5px; border-radius:999px;
       border:1px solid rgba(255, 215, 0, 0.5); text-transform:uppercase; white-space:nowrap;
@@ -571,7 +549,6 @@
         0 0 3px rgba(255, 215, 0, 0.5);
     }
 
-    /* Hari kosong */
     .names-mini .empty{
       opacity:.7; font-weight:700; font-size:10px; text-align:center;
       padding:6px 0; background:transparent; border:1px dashed rgba(255, 215, 0, 0.5);
@@ -581,7 +558,6 @@
         0 0 3px rgba(255, 215, 0, 0.5);
     }
 
-    /* Dot indikator lebih kecil */
     .dot{
       position:absolute; right:6px; bottom:6px; width:8px; height:8px; border-radius:50%;
       background: rgba(255, 215, 0, 0.7); box-shadow:0 0 0 1.5px rgba(139, 0, 0, 0.8) inset;
@@ -590,10 +566,8 @@
       background:#fff; box-shadow:0 0 8px rgba(255,255,255,.8);
     }
 
-    /* Hari ini */
     .today{outline:2px solid rgba(255, 215, 0, 0.9); outline-offset:-2px;}
 
-    /* ===== HEADERS ===== */
     .section-head{
       display:grid;
       grid-template-columns: 1fr auto;
@@ -625,7 +599,6 @@
       .section-head > div:last-child{justify-self:center;}
     }
 
-    /* ===== TEKS HIDUP ===== */
     @supports (-webkit-background-clip:text) or (background-clip:text){
       .section-title{
         position:relative;
@@ -687,7 +660,6 @@
       .section-title, .section-title::after{ animation:none !important; }
     }
 
-    /* ===== CUTI ===== */
     .cuti-panel{display:none;}
     .cuti-table-wrap{
       width:100%;
@@ -733,7 +705,6 @@
       margin-left:6px;
     }
 
-    /* ===== BAGAN ===== */
     .bagan-panel{display:none;}
     .bagan-wrap{
       position:relative;
@@ -744,6 +715,7 @@
       padding:14px;
       overflow:auto;
       min-height:65vh;
+      min-width:1200px;
     }
     .bagan-board{
       display:grid;
@@ -755,7 +727,6 @@
       border-radius:12px;
     }
     
-    /* STYLE SEAT BAGAN DENGAN DIVISI */
     .seat{
       position: relative;
       border-radius: 10px;
@@ -821,7 +792,6 @@
       box-shadow: none !important;
     }
 
-    /* ===== MODAL ===== */
     .modal-backdrop{
       position:fixed; inset:0; background:rgba(2,6,23,.6); display:none;
       place-items:center; padding:18px; z-index:50; backdrop-filter: blur(4px);
@@ -899,7 +869,6 @@
     }
     .toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
 
-    /* ===== PIKET ===== */
     .piket-panel{display:none;}
     .piket-panel .cuti-table thead th{
       background:linear-gradient(90deg, #111827, #334155);
@@ -1005,14 +974,13 @@
       border: 1px solid rgba(255, 200, 200, 0.3);
     }
 
-    /* ===== TOMBOL BLOCKED TANGGAL - MERAH ===== */
     #toggleBlock {
       background: linear-gradient(145deg,
-        #DC2626 0%,      /* Red-600 */
-        #EF4444 25%,     /* Red-500 */
-        #F87171 50%,     /* Red-400 */
-        #EF4444 75%,     /* Red-500 kembali */
-        #B91C1C 100%     /* Red-700 */
+        #DC2626 0%,
+        #EF4444 25%,
+        #F87171 50%,
+        #EF4444 75%,
+        #B91C1C 100%
       ) !important;
       color: white !important;
       border: 1px solid rgba(220, 38, 38, 0.7) !important;
@@ -1031,11 +999,11 @@
 
     #toggleBlock:hover {
       background: linear-gradient(145deg,
-        #EF4444 0%,      /* Red-500 */
-        #F87171 25%,     /* Red-400 */
-        #FCA5A5 50%,     /* Red-300 */
-        #F87171 75%,     /* Red-400 kembali */
-        #DC2626 100%     /* Red-600 */
+        #EF4444 0%,
+        #F87171 25%,
+        #FCA5A5 50%,
+        #F87171 75%,
+        #DC2626 100%
       ) !important;
       transform: translateY(-2px);
       box-shadow:
@@ -1044,7 +1012,6 @@
         0 6px 16px rgba(220, 38, 38, 0.6) !important;
     }
 
-    /* ===== CS MAWAROTO TABLE ===== */
     .cs-panel{display:none;}
     .cs-wrap{
       width:100%;
@@ -1054,6 +1021,7 @@
       background:rgba(0,0,0,.35);
       backdrop-filter: blur(6px);
       box-shadow: var(--shadow);
+      min-width:1200px;
     }
     table.cs-table{
       width:100%;
@@ -1153,13 +1121,13 @@
     }
     .cs-reset-btn:hover{background:rgba(244,63,94,.30); transform:translateY(-1px);}
 
-    /* ===== CATATAN PANEL ===== */
     .catatan-panel{display:none;}
     .catatan-container{
       display:flex;
       flex-direction:column;
       gap:15px;
       padding:10px;
+      min-width:1200px;
     }
     
     .catatan-form{
@@ -1241,8 +1209,6 @@
       font-size:15px;
       font-weight:900;
       letter-spacing:.5px;
-      
-      /* Efek teks putih kemerahan metalik */
       color: transparent !important;
       background-image: linear-gradient(
         135deg,
@@ -1276,14 +1242,11 @@
       padding:8px;
       border-radius:6px;
       background:rgba(0,0,0,.25);
-      
-      /* Efek teks putih kemerahan metalik untuk konten */
       color: #FFE5E5;
       text-shadow: 
         0 0 8px rgba(255, 100, 100, 0.7),
         0 0 12px rgba(255, 200, 200, 0.5),
         0 0 20px rgba(255, 255, 255, 0.3);
-      
       border: 1px solid rgba(255, 180, 180, 0.3);
     }
     
@@ -1297,8 +1260,6 @@
     .catatan-date{
       opacity:.8;
       font-weight:900;
-      
-      /* Efek teks metalik untuk tanggal */
       color: #FFCACA;
       text-shadow: 
         0 0 5px rgba(255, 150, 150, 0.6),
@@ -1320,8 +1281,6 @@
       color:var(--text);
       font-weight:900;
       letter-spacing:.3px;
-      
-      /* Efek tombol metalik */
       background-image: linear-gradient(
         180deg,
         rgba(255, 245, 245, 0.9) 0%,
@@ -1388,7 +1347,6 @@
       font-size:14px;
     }
 
-    /* Kategori warna untuk catatan */
     .catatan-category[data-category="DI BAWAH 3 BULAN"] {
       background: rgba(34, 197, 94, 0.3);
       color: #a7f3d0;
@@ -1419,7 +1377,6 @@
       border: 1px solid rgba(239, 68, 68, 0.5);
     }
 
-    /* Menu Catatan di Top Tabs */
     #topTabs .tab-btn[data-type="CATATAN"] {
       background:rgba(255, 100, 100, 0.16);
       color:#FFCACA;
@@ -1435,7 +1392,6 @@
       box-shadow:0 6px 20px rgba(255, 100, 100, 0.45);
     }
 
-    /* ===== MODAL PASSWORD RESET ===== */
     .password-modal .modal {
       width: min(400px, 90%);
       grid-template-columns: 1fr;
@@ -1471,7 +1427,6 @@
       .modal{grid-template-columns:1fr;}
       .bagan-board{grid-template-columns:repeat(20, 80px);}
       
-      /* Responsif kalender */
       .grid{
         gap:6px;
         padding:6px;
@@ -1505,7 +1460,6 @@
         max-width:60px;
       }
 
-      /* Responsif untuk bunga mawar */
       body::after {
         background-size: 
           60px 60px,
@@ -1546,7 +1500,6 @@
       }
     }
 
-    /* Untuk layar sangat kecil */
     @media (max-width: 480px){
       .grid{
         gap:4px;
@@ -1562,7 +1515,6 @@
         max-height:16px;
       }
 
-      /* Untuk bunga mawar di layar kecil */
       body::after {
         background-size: 
           40px 40px,
@@ -1899,7 +1851,7 @@
   // =========================
   // ✅ GLOBAL FIREBASE SYNC
   // =========================
-  const GLOBAL_ROOM_ID = "mwtt-main"; // semua user pakai room ini → data sama global
+  const GLOBAL_ROOM_ID = "mwtt-main";
 
   const clientIdKey = "mwtt-client-id";
   const clientId = localStorage.getItem(clientIdKey) || ("c_" + Math.random().toString(16).slice(2));
@@ -2029,7 +1981,6 @@
   ];
   const ROLE_COLOR_MAP = Object.fromEntries(ROLE_OPTIONS.map(o => [o.value, o.color]));
 
-  // ===== DIVISI OPTIONS UNTUK BAGAN =====
   const DIVISI_OPTIONS = [
     { value: "LIVE_CHAT", label: "LIVE CHAT", color: "#3498db" },
     { value: "WHATSAPP", label: "WHATSAPP", color: "#2ecc71" },
@@ -2050,13 +2001,13 @@
     { value: "ASSIT LEADER UTAMA", label: "ASSIT LEADER UTAMA", color: "#01568fff" },
     { value: "MASTER", label: "MASTER", color: "#f39c12" },
     { value: "LEADER MALAM", label: "LEADER MALAM", color: "#c4fa01ff" },
-    { value: "TELEGRAM / SOSMED", label: "TELEGRAM / SOSMED", color: "#12f31dff" },
+    { value: "TELEGRAM / SOSMED", label: "TELEGRAM / SOSMED", color: "#89a789ff" },
     { value: "*", label: "*", color: "#ff008cff" },
     { value: "-", label: "-", color: "#6e4400ff" },
     { value: "QRIS", label: "QRIS", color: "#d35400" },
     { value: "LEADER_WD", label: "LEADER WD", color: "#5a7794ff" },
-    { value: "ASSIT_LEADER_WD", label: "ASSIT LEADER WD", color: "#e782c6ff" },
-    { value: "LEADER_DEPOSIT", label: "LEADER DEPOSIT", color: "#fcfcfcff" },
+    { value: "ASSIT_LEADER_WD", label: "ASSIT LEADER WD", color: "#fbff00ff" },
+    { value: "LEADER_DEPOSIT", label: "LEADER DEPOSIT", color: "#ff0000ff" },
     { value: "LEADER_LIVE_CHAT", label: "LEADER LIVE CHAT", color: "#923a3aff" },
     { value: "LEADER_UTAMA", label: "LEADER UTAMA", color: "#e74c3c" }
   ];
@@ -2070,7 +2021,6 @@
   const lockKey = "offday-lock-state";
   let isLocked = (localStorage.getItem(lockKey) ?? "true") === "true";
 
-  // ===== VARIABLES UNTUK MODAL PASSWORD =====
   let passwordCallback = null;
   let resetPanelName = "";
 
@@ -2136,7 +2086,6 @@
     || safeClone(defaultPiket);
   const savePiket = () => localStorage.setItem(piketKey, JSON.stringify(piketStore));
 
-  // ===== CS MAWAROTO STORE =====
   const csKey = "cs-mawaroto-v1";
   const csDefault = [
     { name: "CS ANITA", job: "LIVECHAT" },
@@ -2171,7 +2120,6 @@
     { value:"RESULT", label:"RESULT", color:"#52525B" },
   ];
 
-  // ===== CATATAN STORE =====
   const catatanKey = "catatan-v1";
   const catatanStore = JSON.parse(localStorage.getItem(catatanKey) || "[]");
   const saveCatatan = () => localStorage.setItem(catatanKey, JSON.stringify(catatanStore));
@@ -2215,7 +2163,6 @@
     }
   }
 
-  // ===== FUNGSI MODAL PASSWORD =====
   function openPasswordModal(title, sub, callback, panelName = "") {
     resetPanelName = panelName;
     passwordCallback = callback;
@@ -2252,7 +2199,6 @@
     }
   };
 
-  // Handle Enter key in password modal
   $("#passwordInput").addEventListener("keypress", (e) => {
     if (e.key === "Enter") {
       $("#passwordConfirmBtn").click();
@@ -2265,7 +2211,6 @@
     b.className = isLocked ? "btn-amber" : "btn-green";
     localStorage.setItem(lockKey, String(isLocked));
     
-    // Sembunyikan tombol tambah dan reset saat terkunci
     const buttonsToHide = [
       "#addCutiBtn",
       "#addCatatanBtn",
@@ -2288,7 +2233,6 @@
       if (btn) btn.style.display = isLocked ? "none" : "inline-block";
     });
 
-    // Render ulang panel aktif untuk update tombol di dalamnya
     reRenderActivePanel();
   }
 
@@ -2301,16 +2245,13 @@
     else renderCalendar();
   }
 
-  // ===== FUNGSI LOCK/UNLOCK =====
   $("#lockBtn").onclick = () => {
     if (!isLocked) {
-      // Jika sedang tidak terkunci, kunci langsung
       isLocked = true;
       updateLockUI();
       schedulePush();
       toast("Mode terkunci");
     } else {
-      // Jika terkunci, minta password untuk buka
       openPasswordModal(
         "Buka Mode Edit",
         "Masukkan password untuk mengaktifkan mode edit",
@@ -2784,7 +2725,6 @@
     }
   };
 
-  // ===== TOMBOL RESET DENGAN PASSWORD =====
   $("#resetCutiBtn").onclick = () => {
     if (isLocked) {
       toast("Terkunci. Tidak bisa reset CUTI.");
@@ -2807,7 +2747,6 @@
     );
   };
 
-  // ===== FUNGSI UNTUK BAGAN DENGAN DIVISI =====
   function seatLabel(i){ return String(i + 1); }
 
   let deleteSeatMode = false;
@@ -2824,7 +2763,6 @@
     toast(deleteSeatMode ? "Klik seat untuk hapus (kotak hilang)" : "Mode hapus dimatikan");
   };
 
-  // Fungsi untuk menyesuaikan warna
   function adjustColor(hex, percent) {
     const num = parseInt(hex.replace("#", ""), 16);
     const amt = Math.round(2.55 * percent);
@@ -2840,7 +2778,6 @@
     ).toString(16).slice(1);
   }
 
-  // Fungsi untuk mendapatkan label divisi
   function getDivisiLabel(value) {
     const divisi = DIVISI_OPTIONS.find(d => d.value === value) || 
                    DIVISI_OPTIONS.find(d => d.label === value);
@@ -2859,7 +2796,6 @@
       const div=document.createElement("div");
       const isActive = seat.active !== false;
       
-      // Dapatkan warna divisi
       const divisiInfo = DIVISI_OPTIONS.find(d => d.value === seat.divisi) || 
                         DIVISI_OPTIONS.find(d => d.label === seat.divisi);
       const divisiColor = divisiInfo ? divisiInfo.color : "#34495e";
@@ -2872,23 +2808,19 @@
       div.draggable = !isLocked && isActive;
       div.dataset.i=i;
 
-      // Set warna latar berdasarkan divisi
       if (isActive && seat.name && seat.divisi) {
         div.style.background = `linear-gradient(135deg, ${divisiColor} 0%, ${adjustColor(divisiColor, -20)} 100%)`;
         div.style.color = textColor;
         div.style.border = `2px solid ${adjustColor(divisiColor, 30)}`;
         div.style.boxShadow = `0 4px 15px ${divisiColor}40`;
       } else if (isActive && seat.name) {
-        // Jika ada nama tapi tidak ada divisi
         div.style.background = "linear-gradient(135deg, #2c3e50 0%, #34495e 100%)";
         div.style.color = "#ffffff";
       } else if (isActive) {
-        // Seat kosong
         div.style.background = "linear-gradient(135deg, #7f8c8d 0%, #95a5a6 100%)";
         div.style.color = "#ecf0f1";
       }
 
-      // Konten seat
       if (isActive) {
         if (seat.name) {
           div.innerHTML = `
@@ -2926,11 +2858,9 @@
           return;
         }
 
-        // Buka modal edit untuk seat
         openBaganSeatModal(i);
       });
 
-      // Drag & drop event listeners
       div.addEventListener("dragstart", e=>{
         div.classList.add("dragging");
         e.dataTransfer.setData("text/plain", String(i));
@@ -2963,11 +2893,9 @@
     });
   }
 
-  // ===== MODAL EDIT SEAT BAGAN =====
   function openBaganSeatModal(index) {
     const seat = baganStore[index];
     
-    // Buat modal HTML
     const modalHTML = `
       <div class="modal-backdrop" id="baganSeatModal">
         <div class="modal" style="grid-template-columns:1fr; max-width:500px;">
@@ -3009,16 +2937,13 @@
       </div>
     `;
     
-    // Tambahkan modal ke body
     const modalContainer = document.createElement('div');
     modalContainer.innerHTML = modalHTML;
     document.body.appendChild(modalContainer);
     
-    // Tampilkan modal
     const modal = document.getElementById('baganSeatModal');
     modal.style.display = 'grid';
     
-    // Event listeners
     document.getElementById('baganSeatCancel').onclick = () => {
       modal.remove();
     };
@@ -3039,7 +2964,6 @@
       toast(`Seat ${seatLabel(index)} ${name ? 'diupdate' : 'dikosongkan'}`);
     };
     
-    // Warna dropdown
     const select = document.getElementById('baganSeatDivisi');
     select.addEventListener('change', function() {
       const selectedOption = this.options[this.selectedIndex];
@@ -3053,7 +2977,6 @@
       }
     });
     
-    // Trigger change untuk set warna awal
     select.dispatchEvent(new Event('change'));
   }
 
@@ -3246,7 +3169,6 @@
     }
   };
 
-  // ===== CS MAWAROTO TABLE RENDER + tombol → OFFDAY =====
   function renderCSTable(){
     const body = $("#csTableBody");
     if(!body) return;
@@ -3456,7 +3378,6 @@
     }
   };
 
-  // ===== CATATAN FUNCTIONS =====
   function renderCatatanList() {
     const container = $("#catatanList");
     if (!container) return;
@@ -3468,7 +3389,6 @@
       return;
     }
     
-    // Urutkan dari yang terbaru
     const sortedCatatan = [...catatanStore].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     
     sortedCatatan.forEach((catatan, idx) => {
@@ -3493,7 +3413,6 @@
       container.appendChild(item);
     });
     
-    // Tambahkan event listener untuk tombol edit dan hapus
     container.querySelectorAll(".catatan-btn.edit").forEach(btn => {
       btn.addEventListener("click", (e) => {
         if (isLocked) { toast("Terkunci. Hanya bos yang bisa edit."); return; }
@@ -3568,11 +3487,9 @@
       };
       
       if (editingCatatanIndex !== null) {
-        // Update catatan yang sedang diedit
         catatanStore[editingCatatanIndex] = newCatatan;
         toast("Catatan diupdate");
       } else {
-        // Tambah catatan baru
         catatanStore.push(newCatatan);
         toast("Catatan ditambahkan");
       }
@@ -3581,7 +3498,6 @@
       renderCatatanList();
       schedulePush();
       
-      // Reset form
       form.reset();
       editingCatatanIndex = null;
       $("#catatanForm button[type='submit']").innerHTML = '<i class="fas fa-plus"></i> Simpan Catatan';
@@ -3594,7 +3510,6 @@
       return;
     }
     
-    // Reset form dan fokus ke input judul
     $("#catatanForm").reset();
     editingCatatanIndex = null;
     $("#catatanForm button[type='submit']").innerHTML = '<i class="fas fa-plus"></i> Simpan Catatan';
@@ -3733,7 +3648,6 @@
     schedulePush();
   };
 
-  // bulk import (tetap)
   function parseNamesFromPaste(text){
     return text.split(/\r?\n|\t|,|;/g).map(s=>s.trim()).filter(Boolean);
   }
@@ -3796,7 +3710,6 @@
           const slot=store[key].entries.find(e=>!(e.name||"").trim());
           if(slot){
             slot.name=namesList[idx];
-            // otomatis isi jobdesk jika nama ada di CS MAWAROTO
             slot.role=getCsJobForName(namesList[idx]);
             store[key].off=true;
             store[key].type=store[key].type||"OFF";
@@ -3815,6 +3728,100 @@
     toast("P1 masuk "+r1.filled+" | P2 masuk "+r2.filled);
   }
   $("#bulkImport").onclick=bulkImportNames;
+
+  // ===== FITUR GESER KIRI-KANAN DENGAN SHIFT + MOUSE WHEEL =====
+  let isShiftPressed = false;
+  
+  // Event listener untuk tombol Shift
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Shift') {
+      isShiftPressed = true;
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift') {
+      isShiftPressed = false;
+    }
+  });
+
+  // Event listener untuk mouse wheel dengan Shift
+  document.addEventListener('wheel', (e) => {
+    if (isShiftPressed) {
+      e.preventDefault();
+      
+      // Cari elemen yang sedang aktif
+      const activePanels = [
+        document.querySelector('.app'),
+        document.querySelector('#grid'),
+        document.querySelector('.bagan-wrap'),
+        document.querySelector('.cuti-table-wrap'),
+        document.querySelector('.cs-wrap'),
+        document.querySelector('.catatan-container')
+      ];
+      
+      // Scroll elemen yang bisa di-scroll
+      activePanels.forEach(panel => {
+        if (panel && panel.offsetParent !== null) {
+          panel.scrollLeft += e.deltaY * 2; // Percepat scroll
+        }
+      });
+      
+      // Tampilkan toast petunjuk
+      toast(`📜 Geser ${e.deltaY > 0 ? 'kanan' : 'kiri'} (Shift + Scroll)`);
+    }
+  }, { passive: false });
+
+  // ===== HILANGKAN PESAN "CONSOLE ASSETS SHORTCUTS" =====
+  (function() {
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    const originalInfo = console.info;
+    
+    console.log = function(...args) {
+      const message = args.join(' ');
+      if (!message.includes('Console Assets Shortcuts') && 
+          !message.includes('assets shortcuts') &&
+          !message.includes('assets-shortcuts')) {
+        originalLog.apply(console, args);
+      }
+    };
+    
+    console.warn = function(...args) {
+      const message = args.join(' ');
+      if (!message.includes('Console Assets Shortcuts') &&
+          !message.includes('assets shortcuts') &&
+          !message.includes('assets-shortcuts')) {
+        originalWarn.apply(console, args);
+      }
+    };
+    
+    console.error = function(...args) {
+      const message = args.join(' ');
+      if (!message.includes('Console Assets Shortcuts') &&
+          !message.includes('assets shortcuts') &&
+          !message.includes('assets-shortcuts')) {
+        originalError.apply(console, args);
+      }
+    };
+    
+    console.info = function(...args) {
+      const message = args.join(' ');
+      if (!message.includes('Console Assets Shortcuts') &&
+          !message.includes('assets shortcuts') &&
+          !message.includes('assets-shortcuts')) {
+        originalInfo.apply(console, args);
+      }
+    };
+    
+    setTimeout(() => {
+      console.clear();
+      console.log("✅ MAWARTOTO - Jadwal Offday System");
+      console.log("🛡️  Sistem berjalan dengan baik");
+      console.log("📱 Gunakan Shift + Scroll mouse untuk geser horizontal");
+    }, 1000);
+  })();
 
   window.addEventListener("load", () => {
     updateLockUI();
