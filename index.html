@@ -1982,6 +1982,55 @@
         min-height: 120px;
       }
     }
+    
+    /* ===== STYLE UNTUK MODAL 10 BARIS ===== */
+    #modalNames {
+      max-height: 350px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 5px;
+    }
+    
+    #modalNames::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    #modalNames::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.05);
+      border-radius: 3px;
+    }
+    
+    #modalNames::-webkit-scrollbar-thumb {
+      background: rgba(139,92,246,0.5);
+      border-radius: 3px;
+    }
+    
+    #modalNames::-webkit-scrollbar-thumb:hover {
+      background: rgba(139,92,246,0.7);
+    }
+    
+    /* Tombol undo/redo */
+    #undoBtn:not(:disabled):hover, #redoBtn:not(:disabled):hover {
+      transform: translateY(-1px);
+      background: rgba(245,158,11,0.26);
+    }
+    
+    #undoBtn:disabled, #redoBtn:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+    
+    /* Info jumlah slot di modal */
+    .slot-info {
+      font-size: 11px;
+      color: #FFD700;
+      text-align: center;
+      padding: 4px;
+      background: rgba(139,0,0,0.2);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(255,215,0,0.3);
+    }
   </style>
 
   <!-- Firebase SDK (v8 compat CDN) -->
@@ -2014,6 +2063,14 @@
         <button id="prev">← Bulan lalu</button>
         <button id="todayBtn" class="btn-green">Hari ini</button>
         <button id="next">Bulan depan →</button>
+        <div style="display:flex; gap:4px;">
+          <button id="undoBtn" class="btn-amber" title="Ctrl+Z" style="padding:9px 12px; border-radius:12px; opacity:0.5;" disabled>
+            ↶ Undo
+          </button>
+          <button id="redoBtn" class="btn-amber" title="Ctrl+Y atau Ctrl+Shift+Z" style="padding:9px 12px; border-radius:12px; opacity:0.5;" disabled>
+            ↷ Redo
+          </button>
+        </div>
         <button id="clear" class="btn-accent">Reset bulan ini</button>
         <button id="bulkImport" class="btn-accent">📥 Import Excel</button>
         <button id="lockBtn" class="btn-amber">🔒 TERKUNCI</button>
@@ -2096,8 +2153,10 @@
       
       <div style="margin:15px; padding:10px; background:rgba(139,0,0,0.3); border-radius:12px; border:1px solid rgba(255,215,0,0.3);">
         <div style="color:#FFD700; font-weight:900; font-size:12px; margin-bottom:10px;">
+          REVISI: 31 Baris, 4 Nama per Sel, 1 Tanggal
         </div>
         <div style="color:#FFD700; font-weight:900; font-size:12px;">
+          Klik tombol COPY di header kolom untuk menyalin semua nama dalam kolom tersebut.
         </div>
       </div>
       
@@ -2263,7 +2322,7 @@
     <div class="modal">
       <div>
         <h3 id="modalTitle">Isi Jadwal</h3>
-        <div class="sub" id="modalSub">Maksimal 8 orang</div>
+        <div class="sub" id="modalSub">Maksimal 10 orang</div>
 
         <div style="margin:8px 0 10px;">
           <label style="font-size:12px; font-weight:900; letter-spacing:.3px; opacity:.9;">
@@ -2525,6 +2584,122 @@
   }
 
   // =========================
+  // ✅ FITUR UNDO/REDO (CTRL+Z)
+  // =========================
+  let undoStack = [];
+  let redoStack = [];
+  const MAX_UNDO_HISTORY = 20;
+
+  function saveToUndoStack() {
+    if (activeKey && store[activeKey]) {
+      const snapshot = {
+        key: activeKey,
+        data: JSON.parse(JSON.stringify(store[activeKey]))
+      };
+      
+      undoStack.push(snapshot);
+      if (undoStack.length > MAX_UNDO_HISTORY) {
+        undoStack.shift();
+      }
+      
+      redoStack = [];
+      updateUndoRedoUI();
+    }
+  }
+
+  function undo() {
+    if (undoStack.length === 0) {
+      toast("Tidak ada perubahan untuk di-undo");
+      return;
+    }
+    
+    const snapshot = undoStack.pop();
+    const currentState = store[snapshot.key] ? JSON.parse(JSON.stringify(store[snapshot.key])) : null;
+    
+    if (currentState) {
+      redoStack.push({
+        key: snapshot.key,
+        data: currentState
+      });
+    }
+    
+    store[snapshot.key] = snapshot.data;
+    saveStore();
+    
+    if (activeKey === snapshot.key && $("#backdrop").style.display === "grid") {
+      const date = new Date(snapshot.key);
+      openCalendarModal(snapshot.key, date);
+    }
+    
+    renderCalendar();
+    schedulePush();
+    updateUndoRedoUI();
+    toast("Undo berhasil");
+  }
+
+  function redo() {
+    if (redoStack.length === 0) {
+      toast("Tidak ada perubahan untuk di-redo");
+      return;
+    }
+    
+    const snapshot = redoStack.pop();
+    const currentState = store[snapshot.key] ? JSON.parse(JSON.stringify(store[snapshot.key])) : null;
+    
+    if (currentState) {
+      undoStack.push({
+        key: snapshot.key,
+        data: currentState
+      });
+    }
+    
+    store[snapshot.key] = snapshot.data;
+    saveStore();
+    
+    if (activeKey === snapshot.key && $("#backdrop").style.display === "grid") {
+      const date = new Date(snapshot.key);
+      openCalendarModal(snapshot.key, date);
+    }
+    
+    renderCalendar();
+    schedulePush();
+    updateUndoRedoUI();
+    toast("Redo berhasil");
+  }
+
+  function updateUndoRedoUI() {
+    const undoBtn = $("#undoBtn");
+    const redoBtn = $("#redoBtn");
+    
+    if (undoBtn) {
+      undoBtn.disabled = undoStack.length === 0;
+      undoBtn.style.opacity = undoStack.length === 0 ? "0.5" : "1";
+    }
+    
+    if (redoBtn) {
+      redoBtn.disabled = redoStack.length === 0;
+      redoBtn.style.opacity = redoStack.length === 0 ? "0.5" : "1";
+    }
+  }
+
+  // Event listener untuk Ctrl+Z dan Ctrl+Y
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+      if (e.key === 'z' || e.key === 'Z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo(); // Ctrl+Shift+Z untuk redo
+        } else {
+          undo(); // Ctrl+Z untuk undo
+        }
+      } else if (e.key === 'y' || e.key === 'Y') {
+        e.preventDefault();
+        redo(); // Ctrl+Y untuk redo
+      }
+    }
+  });
+
+  // =========================
   // APP ORIGINAL LOGIC
   // =========================
   const WEEKDAYS_ID = ["SENIN","SELASA","RABU","KAMIS","JUMAT","SABTU","MINGGU"];
@@ -2583,7 +2758,6 @@
     { value: "LEADER_DEPOSIT", label: "LEADER DEPOSIT", color: "#ff0000ff" },
     { value: "LEADER_LIVE_CHAT", label: "LEADER LIVE CHAT", color: "#923a3aff" },
     { value: "LEADER_UTAMA", label: "LEADER UTAMA", color: "#e74c3c" }
-    
   ];
 
   const TYPE_OPTIONS = [
@@ -2598,7 +2772,7 @@
   let passwordCallback = null;
   let resetPanelName = "";
 
-  const storeKey = "offday-v4";
+  const storeKey = "offday-v5"; // Versi baru untuk 10 baris
   const store = JSON.parse(localStorage.getItem(storeKey) || "{}");
   const saveStore = () => localStorage.setItem(storeKey, JSON.stringify(store));
 
@@ -2646,7 +2820,7 @@
   }
 
   // Store untuk BARI-BARIS KOLOM EXCEL dengan struktur baru: 31 baris, 4 nama, 1 tanggal
-  const barisKolomExcelKey = "baris-kolom-excel-v4"; // Versi baru dengan 4 nama dan 1 tanggal
+  const barisKolomExcelKey = "baris-kolom-excel-v4";
   let barisKolomExcelData = JSON.parse(localStorage.getItem(barisKolomExcelKey) || "null") || {};
   
   function saveBarisKolomExcel() {
@@ -2827,7 +3001,9 @@
       "#addExcelRowBtn",
       "#resetExcelBtn",
       "#addNamaBtn",
-      "#resetNamaBtn"
+      "#resetNamaBtn",
+      "#undoBtn",
+      "#redoBtn"
     ];
     
     buttonsToHide.forEach(selector => {
@@ -2883,18 +3059,23 @@
     return {y:y, m:m, startDay:startDay, daysInMonth:last.getDate()};
   }
 
+  // =========================
+  // ✅ MODIFIKASI UNTUK 10 BARIS
+  // =========================
   function ensureDay(key){
     store[key]=store[key]||{};
     if(store[key].off===true && !store[key].type) store[key].type="OFF";
     if(!store[key].type) store[key].type="OFF";
 
     if(!store[key].entries){
-      const old = store[key].names || Array(8).fill("");
+      const old = store[key].names || Array(10).fill(""); // Ubah menjadi 10
       store[key].entries = old.map(n=>({name:n||"",role:""}));
       delete store[key].names;
     }
-    while(store[key].entries.length<8) store[key].entries.push({name:"",role:""});
-    store[key].entries = store[key].entries.slice(0,8);
+    
+    // Ubah dari 8 menjadi 10
+    while(store[key].entries.length<10) store[key].entries.push({name:"",role:""});
+    store[key].entries = store[key].entries.slice(0,10);
 
     store[key].blocked = store[key].blocked || false;
   }
@@ -2988,14 +3169,19 @@
 
         const typeLabel=(TYPE_OPTIONS.find(t=>t.value===type)||{}).label||type;
 
-        if(entries.length===0){
-          const emptyText = (type==="OFF") ? "Klik untuk isi" : (typeLabel + ": klik untuk isi");
+        // Hitung total dan tampilkan maksimal 8 di kalender
+        const totalEntries = entries.length;
+        const displayedEntries = entries.slice(0, 8);
+        const moreCount = totalEntries - 8;
+
+        if(totalEntries===0){
+          const emptyText = (type==="OFF") ? "Klik untuk isi (10 slot)" : (typeLabel + ": klik untuk isi");
           miniHtml=
             '<div class="names-mini">'+
               '<div class="line empty">'+emptyText+'</div>'+
             '</div>';
         } else{
-          const lines=entries.map(e=>{
+          const lines=displayedEntries.map(e=>{
             const copyText=e.name;
             if(!e.role){
               return '<div class="line copy-line" data-copy="'+copyText+'">'+
@@ -3013,6 +3199,14 @@
                    '</div>';
           }).join("");
 
+          // Tambahkan indikator jika ada lebih dari 8
+          let moreIndicator = "";
+          if (moreCount > 0) {
+            moreIndicator = '<div class="line" style="font-size:10px; color:#FFD700; background:rgba(139,0,0,0.3);">' +
+              '<span>+' + moreCount + ' nama lagi</span>' +
+              '</div>';
+          }
+
           const showHeader = (type !== "OFF");
           const headerHtml = showHeader ? ('<div class="line"><b>'+typeLabel+'</b></div>') : "";
 
@@ -3020,6 +3214,7 @@
             '<div class="names-mini">'+
               headerHtml+
               lines+
+              moreIndicator+
             '</div>';
         }
       }
@@ -3054,6 +3249,11 @@
   }
 
   function openCalendarModal(key,date){
+    // Simpan state ke undo stack saat membuka modal
+    if (store[key]) {
+      saveToUndoStack();
+    }
+    
     ensureDay(key);
     const type=store[key].type||"OFF";
 
@@ -3061,9 +3261,10 @@
       "Jadwal: "+WEEKDAYS_ID[(date.getDay()+6)%7]+", "+date.getDate()+" "+MONTHS_ID[date.getMonth()]+" "+date.getFullYear();
 
     const isBlocked=store[key].blocked===true;
-    $("#modalSub").textContent=isBlocked
+    $("#modalSub").innerHTML = isBlocked
       ? "Tanggal ini sedang diblok."
-      : "Isi sampai 8 orang (boleh kosong).";
+      : `<div style="margin-bottom: 8px;">Isi sampai 10 orang (boleh kosong).</div>
+         <div class="slot-info">Slot tersedia: ${10 - (store[key].entries?.filter(e => e.name.trim()).length || 0)}/10</div>`;
 
     const typeSelect=$("#typeSelect");
     typeSelect.value=type;
@@ -3072,7 +3273,10 @@
     const wrap=$("#modalNames");
     wrap.innerHTML="";
 
-    store[key].entries.forEach((entry,i)=>{
+    // Buat 10 baris input (dari 8 menjadi 10)
+    for (let i = 0; i < 10; i++) {
+      const entry = store[key].entries[i] || { name: "", role: "" };
+      
       const row=document.createElement("div");
       row.className="role-row";
 
@@ -3119,12 +3323,14 @@
         store[key].entries[i].name=input.value;
         refreshCopyBox();
       });
+      
       select.addEventListener("change",()=>{
         store[key].entries[i].role=select.value;
         applyColor(); refreshCopyBox();
       });
+      
       applyColor();
-    });
+    }
 
     typeSelect.onchange=()=>{
       store[key].type=typeSelect.value;
@@ -3169,9 +3375,13 @@
 
   $("#deleteOff").onclick=()=>{
     if(!activeKey) return;
+    
+    // Simpan ke undo stack sebelum menghapus
+    saveToUndoStack();
+    
     store[activeKey].off=false;
     store[activeKey].type="OFF";
-    store[activeKey].entries=Array.from({length:8},()=>({name:"",role:""}));
+    store[activeKey].entries=Array.from({length:10},()=>({name:"",role:""})); // Ubah menjadi 10
     if(!store[activeKey].blocked) delete store[activeKey];
     saveStore(); closeCalendarModal(); renderCalendar();
     schedulePush();
@@ -3183,7 +3393,7 @@
     store[activeKey].blocked=!store[activeKey].blocked;
     if(store[activeKey].blocked){
       store[activeKey].off=false;
-      store[activeKey].entries=Array.from({length:8},()=>({name:"",role:""}));
+      store[activeKey].entries=Array.from({length:10},()=>({name:"",role:""}));
     } else {
       store[activeKey].type=store[activeKey].type||"OFF";
     }
@@ -4254,6 +4464,28 @@
       localStorage.removeItem("baris-kolom-excel-v2"); // Hapus data lama
       toast("Data Excel dimigrasi ke versi baru (4 nama, 1 tanggal)");
     }
+    
+    // Migrasi data offday dari versi lama (8 baris) ke versi baru (10 baris)
+    const oldStoreKey = "offday-v4";
+    const oldStore = JSON.parse(localStorage.getItem(oldStoreKey) || "null");
+    if (oldStore && Object.keys(oldStore).length > 0) {
+      for (let key in oldStore) {
+        if (oldStore[key] && oldStore[key].entries && oldStore[key].entries.length === 8) {
+          // Konversi dari 8 ke 10 baris
+          const oldEntries = oldStore[key].entries;
+          const newEntries = [...oldEntries];
+          while (newEntries.length < 10) {
+            newEntries.push({ name: "", role: "" });
+          }
+          oldStore[key].entries = newEntries;
+        }
+      }
+      // Simpan ke store baru
+      Object.assign(store, oldStore);
+      saveStore();
+      localStorage.removeItem(oldStoreKey);
+      toast("Data offday dimigrasi dari 8 ke 10 baris");
+    }
   }
 
   function renderPiketTable(){
@@ -4470,7 +4702,7 @@
 
         const slot = store[tgl].entries.find(e => !(e.name||"").trim());
         if(!slot){
-          toast("Slot OFFDAY penuh (maks 8)");
+          toast("Slot OFFDAY penuh (maks 10)"); // Update pesan
           return;
         }
 
@@ -4869,13 +5101,24 @@
     if(isLocked){ toast("Terkunci. Tidak bisa import."); return; }
 
     const pasted = prompt(
-      "Paste nama dari Excel.\n\nMODE: PENCAR PERIODE\n- Periode 1: tgl 1–15\n- Periode 2: tgl 16–akhir\nNama sama otomatis beda periode.\nRandom 1 nama per tanggal.\nSkip BLOCKED.",
+      "Paste nama dari Excel.\n\nMODE: PENCAR PERIODE\n- Periode 1: tgl 1–15\n- Periode 2: tgl 16–akhir\nNama sama otomatis beda periode.\nRandom 1 nama per tanggal.\nSkip BLOCKED.\n\nNote: Sekarang tersedia 10 slot per tanggal.",
       ""
     );
     if(!pasted) return;
 
     let rawNames=parseNamesFromPaste(pasted);
     if(rawNames.length===0){ toast("Tidak ada nama terdeteksi"); return; }
+
+    // Simpan ke undo stack sebelum import
+    const md = getMonthData(view);
+    const y = md.y, m = md.m, daysInMonth = md.daysInMonth;
+    for (let d = 1; d <= daysInMonth; d++) {
+        const key = ymd(new Date(y, m, d));
+        if (store[key]) {
+            saveToUndoStack();
+            break;
+        }
+    }
 
     const toggleByName={}, namesP1=[], namesP2=[];
     for(const nm of rawNames){
@@ -4886,12 +5129,12 @@
     }
 
     const listP1=shuffle(namesP1), listP2=shuffle(namesP2);
-    const md=getMonthData(view);
-    const y=md.y, m=md.m, daysInMonth=md.daysInMonth;
+    const md2=getMonthData(view);
+    const y2=md2.y, m2=md2.m, daysInMonth2=md2.daysInMonth;
 
     let eligibleP1=[], eligibleP2=[];
-    for(let d=1; d<=daysInMonth; d++){
-      const key=ymd(new Date(y,m,d));
+    for(let d=1; d<=daysInMonth2; d++){
+      const key=ymd(new Date(y2,m2,d));
       ensureDay(key);
       if(store[key]?.blocked) continue;
       (d<=15?eligibleP1:eligibleP2).push(key);
@@ -4923,7 +5166,7 @@
     const r2=fillPeriod(listP2, eligibleP2);
     saveStore(); renderCalendar();
     schedulePush();
-    toast("P1 masuk "+r1.filled+" | P2 masuk "+r2.filled);
+    toast("P1 masuk "+r1.filled+" | P2 masuk "+r2.filled+" | 10 slot per tanggal");
   }
   $("#bulkImport").onclick=bulkImportNames;
 
@@ -5019,6 +5262,8 @@
       console.log("✅ MAWARTOTO - Jadwal Offday System");
       console.log("🛡️  Sistem berjalan dengan baik");
       console.log("📱 Gunakan Shift + Scroll mouse untuk geser horizontal");
+      console.log("↶ Gunakan Ctrl+Z untuk undo, Ctrl+Y untuk redo");
+      console.log("📊 Sekarang tersedia 10 slot per tanggal di offday");
     }, 1000);
   })();
 
@@ -5026,6 +5271,10 @@
     updateLockUI();
     initTopTabs();
     renderWeekdays();
+    
+    // Migrasi data dari versi lama
+    migrateBarisKolomData();
+    
     renderCalendar();
     setActiveTab("ALL");
     updateDeleteSeatUI();
@@ -5033,9 +5282,11 @@
     setupCatatanForm();
     setupExcelEvents();
     setupNamaEvents();
-
-    // Migrasi data dari versi lama
-    migrateBarisKolomData();
+    
+    // Inisialisasi tombol undo/redo
+    $("#undoBtn").onclick = undo;
+    $("#redoBtn").onclick = redo;
+    updateUndoRedoUI();
 
     startRealtimeSync();
 
