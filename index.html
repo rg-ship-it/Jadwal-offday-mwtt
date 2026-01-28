@@ -497,14 +497,14 @@
       gap:8px;
       padding:8px;
       flex:1;
-      grid-auto-rows: minmax(140px, auto);
+      grid-auto-rows: minmax(180px, auto); /* Ditingkatkan dari 140px untuk 10 nama */
       align-items: stretch;
       min-width:1200px;
       overflow-x:auto;
     }
 
     .day{
-      min-height:140px;
+      min-height:180px; /* Ditingkatkan dari 140px untuk 10 nama */
       height:100%;
       border-radius:12px;
       padding:6px;
@@ -520,7 +520,7 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.3),
         inset 0 -6px 12px rgba(0, 0, 0, 0.4),
         0 4px 12px rgba(0, 0, 0, 0.5);
-      display:flex; flex-direction:column; gap:6px;
+      display:flex; flex-direction:column; gap:4px; /* Dikurangi dari 6px untuk ruang lebih efisien */
       cursor:pointer; position:relative; overflow:hidden;
       transition:.15s; color:#FFD700;
     }
@@ -773,14 +773,20 @@
     }
 
     .names-mini{
-      font-size:11.5px; line-height:1.2; font-weight:800;
-      display:grid; gap:3px; margin-top:2px; flex:1; overflow:hidden;
+      font-size:11px; /* Dikecilkan dari 11.5px untuk 10 baris */
+      line-height:1.1; /* Dikurangi dari 1.2 untuk 10 baris */
+      font-weight:800;
+      display:grid; gap:2px; /* Dikurangi dari 3px untuk 10 baris */
+      margin-top:2px; flex:1; overflow:hidden;
     }
 
     .names-mini .line{
-      display:flex; align-items:center; gap:4px; padding:3px 4px; border-radius:5px;
+      display:flex; align-items:center; gap:4px; padding:2px 4px; /* Padding dikurangi dari 3px 4px */
+      border-radius:5px;
       background:rgba(255, 255, 255, 0.15); border:1px solid rgba(255, 215, 0, 0.3);
-      min-height:20px; max-height:20px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      min-height:18px; /* Dikurangi dari 20px untuk 10 baris */
+      max-height:18px; /* Dikurangi dari 20px untuk 10 baris */
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
       color: #FFD700;
       text-shadow: 
         0 1px 0 rgba(0, 0, 0, 0.8),
@@ -793,12 +799,16 @@
       text-shadow: 
         0 1px 0 rgba(0, 0, 0, 0.8),
         0 0 3px rgba(255, 215, 0, 0.5);
+      font-size:10.5px; /* Ditambahkan untuk ukuran font lebih kecil */
     }
 
     .role-pill{
-      font-size:8.5px; font-weight:900; padding:1px 5px; border-radius:999px;
+      font-size:8px; /* Dikecilkan dari 8.5px untuk 10 baris */
+      font-weight:900; padding:1px 4px; /* Padding dikurangi dari 1px 5px */
+      border-radius:999px;
       border:1px solid rgba(255, 215, 0, 0.5); text-transform:uppercase; white-space:nowrap;
-      flex-shrink:0; max-width:70px; overflow:hidden; text-overflow:ellipsis;
+      flex-shrink:0; max-width:65px; /* Dikurangi dari 70px untuk 10 baris */
+      overflow:hidden; text-overflow:ellipsis;
       background: rgba(0, 0, 0, 0.3);
       color: #FFD700;
       text-shadow: 
@@ -1692,7 +1702,7 @@
         padding:6px;
       }
       .day{
-        min-height:130px;
+        min-height:160px; /* Ditingkatkan dari 130px untuk 10 nama di mobile */
         padding:4px;
       }
       .date-row{
@@ -1706,13 +1716,13 @@
         padding:1px 4px;
       }
       .names-mini{
-        font-size:10.5px;
+        font-size:10px; /* Dikecilkan dari 10.5px untuk 10 baris */
         gap:2px;
       }
       .names-mini .line{
-        padding:2px 3px;
-        min-height:18px;
-        max-height:18px;
+        padding:1px 3px; /* Dikurangi dari 2px 3px untuk 10 baris */
+        min-height:16px; /* Dikurangi dari 18px untuk 10 baris */
+        max-height:16px; /* Dikurangi dari 18px untuk 10 baris */
       }
       .role-pill{
         font-size:7.5px;
@@ -1765,14 +1775,14 @@
         gap:4px;
       }
       .day{
-        min-height:120px;
+        min-height:150px; /* Ditingkatkan dari 120px untuk 10 nama di mobile kecil */
       }
       .names-mini{
-        font-size:10px;
+        font-size:9.5px; /* Dikecilkan dari 10px untuk 10 baris */
       }
       .names-mini .line{
-        min-height:16px;
-        max-height:16px;
+        min-height:15px; /* Dikurangi dari 16px untuk 10 baris */
+        max-height:15px; /* Dikurangi dari 16px untuk 10 baris */
       }
 
       body::after {
@@ -3555,9 +3565,9 @@
         const typeLabel=(TYPE_OPTIONS.find(t=>t.value===type)||{}).label||type;
 
         const totalEntries = entries.length;
-        const displayedEntries = entries.slice(0, 8);
-        const moreCount = totalEntries - 8;
-
+        const displayedEntries = entries.slice(0, 10); // Tampilkan 10 nama (bukan 8)
+        
+        // Hapus indikator "+X nama lagi" karena kita menampilkan semua 10
         if(totalEntries===0){
           const emptyText = (type==="OFF") ? "Klik untuk isi (10 slot)" : (typeLabel + ": klik untuk isi");
           miniHtml=
@@ -3583,13 +3593,7 @@
                    '</div>';
           }).join("");
 
-          let moreIndicator = "";
-          if (moreCount > 0) {
-            moreIndicator = '<div class="line" style="font-size:10px; color:#FFD700; background:rgba(90,0,0,0.3);">' +
-              '<span>+' + moreCount + ' nama lagi</span>' +
-              '</div>';
-          }
-
+          // Hapus indikator "+X nama lagi" karena semua 10 sudah ditampilkan
           const showHeader = (type !== "OFF");
           const headerHtml = showHeader ? ('<div class="line"><b>'+typeLabel+'</b></div>') : "";
 
@@ -3597,7 +3601,6 @@
             '<div class="names-mini">'+
               headerHtml+
               lines+
-              moreIndicator+
             '</div>';
         }
       }
