@@ -9,7 +9,7 @@
   <title>Jadwal Offday - MAWARTOTO</title>
 
   <style>
-    /* [CSS tetap sama seperti asli, tidak ada perubahan] */
+    /* ===== GLOBAL VARIABLES ===== */
     :root{
       --bg:#0b1020;
       --text:#eef2ff;
@@ -115,18 +115,10 @@
     }
 
     @keyframes floatRoses {
-      0%, 100% {
-        transform: translate(0, 0) rotate(0deg);
-      }
-      25% {
-        transform: translate(5px, 10px) rotate(1deg);
-      }
-      50% {
-        transform: translate(-3px, -5px) rotate(-1deg);
-      }
-      75% {
-        transform: translate(7px, -3px) rotate(0.5deg);
-      }
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      25% { transform: translate(5px, 10px) rotate(1deg); }
+      50% { transform: translate(-3px, -5px) rotate(-1deg); }
+      75% { transform: translate(7px, -3px) rotate(0.5deg); }
     }
 
     .falling-stars {
@@ -185,12 +177,8 @@
         transform: translateY(-100px) translateX(0) rotate(0deg);
         opacity: 0;
       }
-      10% {
-        opacity: 1;
-      }
-      90% {
-        opacity: 1;
-      }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
       100% {
         transform: translateY(100vh) translateX(100px) rotate(360deg);
         opacity: 0;
@@ -252,12 +240,8 @@
         transform: translateY(100vh) translateX(0) rotate(0deg);
         opacity: 0;
       }
-      5% {
-        opacity: 0.2;
-      }
-      95% {
-        opacity: 0.2;
-      }
+      5% { opacity: 0.2; }
+      95% { opacity: 0.2; }
       100% {
         transform: translateY(-100px) translateX(100px) rotate(180deg);
         opacity: 0;
@@ -297,14 +281,8 @@
     }
 
     @keyframes tabGlow {
-      0% {
-        opacity: 0.5;
-        transform: scale(1);
-      }
-      100% {
-        opacity: 0.8;
-        transform: scale(1.02);
-      }
+      0% { opacity: 0.5; transform: scale(1); }
+      100% { opacity: 0.8; transform: scale(1.02); }
     }
 
     .controls button {
@@ -329,12 +307,8 @@
     }
 
     @keyframes buttonShine {
-      0% {
-        transform: translateX(-100%) translateY(-100%) rotate(45deg);
-      }
-      100% {
-        transform: translateX(100%) translateY(100%) rotate(45deg);
-      }
+      0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
     }
 
     .app{
@@ -432,12 +406,8 @@
     }
 
     @keyframes panelGlow {
-      0% {
-        opacity: 0.3;
-      }
-      100% {
-        opacity: 0.6;
-      }
+      0% { opacity: 0.3; }
+      100% { opacity: 0.6; }
     }
 
     .cal-head{
@@ -1687,6 +1657,80 @@
       text-align: center;
     }
 
+    /* ===== STYLE UNTUK EMAIL MODAL (MERAH METALIK + BORDER EMAS HIDUP) ===== */
+    .email-modal .modal {
+      background: linear-gradient(145deg, #8B0000, #5A0000, #8B0000);
+      border: 3px solid #FFD700;
+      box-shadow: 
+        0 0 20px #FFD700,
+        0 0 40px #FFD700,
+        inset 0 0 20px rgba(255, 215, 0, 0.5);
+      animation: glowPulse 2s infinite alternate;
+      border-radius: 20px;
+    }
+
+    .email-modal .modal input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 2px solid #FFD700;
+      background: rgba(0, 0, 0, 0.4);
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      outline: none;
+      margin: 15px 0;
+      transition: all 0.3s ease;
+    }
+
+    .email-modal .modal input:focus {
+      box-shadow: 0 0 15px #FFD700, inset 0 0 10px rgba(255, 215, 0, 0.3);
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .email-modal .modal input::placeholder {
+      color: rgba(255, 255, 255, 0.6);
+      font-weight: 400;
+    }
+
+    .email-modal .modal-actions button {
+      background: linear-gradient(145deg, #FFD700, #FFA500);
+      color: #5A0000;
+      font-weight: 900;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid #FFF0B5;
+    }
+
+    .email-modal .modal-actions button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(255, 215, 0, 0.8);
+    }
+
+    .email-modal .modal-actions button#emailCancelBtn {
+      background: linear-gradient(145deg, #666, #333);
+      color: #FFD700;
+      border: 1px solid #FFD700;
+    }
+
+    @keyframes glowPulse {
+      0% {
+        box-shadow: 
+          0 0 20px #FFD700,
+          0 0 40px #FFD700,
+          inset 0 0 20px rgba(255, 215, 0, 0.5);
+      }
+      100% {
+        box-shadow: 
+          0 0 30px #FFD700,
+          0 0 60px #FFAA00,
+          inset 0 0 30px rgba(255, 215, 0, 0.7);
+      }
+    }
+
     /* Responsif untuk mobile */
     @media (max-width: 700px){
       .modal{grid-template-columns:1fr;}
@@ -2419,7 +2463,6 @@
 </head>
 
 <body>
-  <!-- [HTML structure tetap sama seperti asli, tidak ada perubahan] -->
   <div class="app">
     <div class="header">
       <div class="brand">
@@ -2776,6 +2819,23 @@
     </div>
   </div>
 
+  <!-- MODAL EMAIL (custom) -->
+  <div class="modal-backdrop email-modal" id="emailBackdrop">
+    <div class="modal">
+      <div style="width:100%;">
+        <h3 style="color:#FFD700; text-align:center; margin-top:0;">🔐 Masukkan Email</h3>
+        <div class="sub" style="color:#FFE5E5; text-align:center;">Email Anda diperlukan untuk identifikasi</div>
+
+        <input type="email" id="emailInput" class="email-input" placeholder="contoh@email.com" autocomplete="off" />
+
+        <div class="modal-actions" style="justify-content:center;">
+          <button id="emailCancelBtn" class="btn-danger" style="background:rgba(0,0,0,0.5);">Batal</button>
+          <button id="emailConfirmBtn" class="btn-green" style="background:linear-gradient(145deg, #FFD700, #FFA500); color:#5A0000;">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -2811,37 +2871,48 @@
       let pushTimer = null;
 
       // =========================
-      // ✅ USER EMAIL UNTUK LOGGING
+      // ✅ USER EMAIL UNTUK LOGGING (dengan custom modal)
       // =========================
       let userEmail = localStorage.getItem('userEmail') || '';
+      let emailCallback = null;
 
-      function promptEmail() {
-        if (userEmail) return;
-        const email = prompt('Masukkan email Anda untuk melanjutkan:', '');
+      function showEmailModal() {
+        return new Promise((resolve) => {
+          emailCallback = resolve;
+          $('#emailBackdrop').style.display = 'grid';
+          $('#emailInput').value = '';
+          $('#emailInput').focus();
+        });
+      }
+
+      $('#emailConfirmBtn').onclick = () => {
+        const email = $('#emailInput').value.trim();
         if (email && email.includes('@') && email.includes('.')) {
-          userEmail = email.trim();
+          userEmail = email;
           localStorage.setItem('userEmail', userEmail);
+          $('#emailBackdrop').style.display = 'none';
+          if (emailCallback) {
+            emailCallback(userEmail);
+            emailCallback = null;
+          }
           toast(`Selamat datang, ${userEmail}`);
         } else {
-          alert('Email tidak valid. Silakan masukkan email yang benar.');
-          promptEmail(); // minta lagi
+          toast('Email tidak valid');
+          $('#emailInput').focus();
         }
-      }
+      };
 
-      function logDelete(action, detail) {
-        if (!userEmail) {
-          console.warn('User email not found, cannot log delete');
-          return;
+      $('#emailCancelBtn').onclick = () => {
+        alert('Email diperlukan untuk melanjutkan.');
+        $('#emailInput').focus();
+      };
+
+      // Tutup modal jika klik di luar backdrop (opsional)
+      $('#emailBackdrop').addEventListener('click', (e) => {
+        if (e.target === $('#emailBackdrop')) {
+          alert('Silakan masukkan email terlebih dahulu.');
         }
-        const logRef = firebase.database().ref('deleteLogs').push();
-        logRef.set({
-          email: userEmail,
-          action: action,
-          detail: detail,
-          timestamp: Date.now(),
-          userAgent: navigator.userAgent
-        }).catch(err => console.error('Gagal menyimpan log:', err));
-      }
+      });
 
       function schedulePush() {
         if (isApplyingRemote) return;
@@ -2865,6 +2936,21 @@
           lock: { isLocked }
         };
         dbRef.set(payload).catch(err => console.error("GLOBAL SAVE ERR:", err));
+      }
+
+      function logDelete(action, detail) {
+        if (!userEmail) {
+          console.warn('User email not found, cannot log delete');
+          return;
+        }
+        const logRef = firebase.database().ref('deleteLogs').push();
+        logRef.set({
+          email: userEmail,
+          action: action,
+          detail: detail,
+          timestamp: Date.now(),
+          userAgent: navigator.userAgent
+        }).catch(err => console.error('Gagal menyimpan log:', err));
       }
 
       function applyRemote(payload) {
@@ -3323,7 +3409,7 @@
 
       const catatanKey = "catatan-v1";
       const catatanStore = JSON.parse(localStorage.getItem(catatanKey) || "[]");
-      const saveCatatan = () => localStorage.setItem(catanKey, JSON.stringify(catatanStore));
+      const saveCatatan = () => localStorage.setItem(catatanKey, JSON.stringify(catatanStore));
 
       let view = new Date();
       let activeKey = null;
@@ -5714,14 +5800,14 @@
         }
       };
 
-      window.addEventListener("load", () => {
-        promptEmail(); // ✅ Minta email saat load
+      // =========================
+      // ✅ FUNGSI START APP (dipanggil setelah email didapat)
+      // =========================
+      function startApp() {
         updateLockUI();
         initTopTabs();
         renderWeekdays();
-        
         migrateData();
-        
         renderCalendar();
         setActiveTab("ALL");
         updateDeleteSeatUI();
@@ -5729,20 +5815,24 @@
         setupCatatanForm();
         setupExcelEvents();
         setupNamaEvents();
-
         startRealtimeSync();
-
-        setTimeout(() => {
-          initVisualEffects();
-        }, 500);
-
+        setTimeout(initVisualEffects, 500);
         setTimeout(() => {
           dbRef.once("value").then(snap => {
             if (!snap.exists()) pushNow();
           }).catch(()=>{});
         }, 500);
-        
         updateUndoRedoButtons();
+      }
+
+      window.addEventListener("load", () => {
+        if (!userEmail) {
+          showEmailModal().then(() => {
+            startApp();
+          });
+        } else {
+          startApp();
+        }
       });
     })();
   </script>
