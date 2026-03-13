@@ -24,103 +24,59 @@
     }
     *{box-sizing:border-box}
 
-    body{
-      margin:0;
-      font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;
-      color:var(--text);
-      background: 
-        radial-gradient(ellipse at 20% 20%, 
-          rgba(139, 0, 0, 0.1) 0%, 
-          transparent 40%),
-        radial-gradient(ellipse at 80% 80%, 
-          rgba(165, 42, 42, 0.08) 0%, 
-          transparent 40%),
-        radial-gradient(ellipse at 40% 60%, 
-          rgba(178, 34, 34, 0.06) 0%, 
-          transparent 50%),
-        url("https://mariterbang.io/download/RiKzs6Ne.png") center/cover no-repeat fixed,
-        linear-gradient(135deg, 
-          #0b1020 0%, 
-          #1a0f1a 30%, 
-          #0f0f1a 70%, 
-          #0b1020 100%);
-      min-height:100vh;
-      width:100vw;
-      display:block;
-      padding:0;
-      overflow-x:hidden;
-      position:relative;
-      user-select:none;
+    /* ===== BACKGROUND UTAMA DENGAN EFEK HIDUP ===== */
+    body {
+      margin: 0;
+      font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: #0b1020; /* warna dasar fallback */
+      min-height: 100vh;
+      width: 100vw;
+      display: block;
+      padding: 0;
+      overflow-x: hidden;
+      position: relative;
+      user-select: none;
     }
 
-    body::before{
-      content:"";
-      position:fixed;
-      inset:0;
-      background: 
-        radial-gradient(1200px 900px at 50% 30%,
-          rgba(0,0,0,0.12) 0%,
-          rgba(0,0,0,0.42) 60%),
-        radial-gradient(circle at 20% 80%, 
-          rgba(139, 0, 0, 0.08) 0%,
-          transparent 50%),
-        radial-gradient(circle at 80% 20%, 
-          rgba(165, 42, 42, 0.06) 0%,
-          transparent 50%),
-        radial-gradient(circle at 40% 60%, 
-          rgba(178, 34, 34, 0.04) 0%,
-          transparent 50%);
-      pointer-events:none;
-      z-index:-1;
+    /* Gambar background dengan animasi zoom lembut */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url("https://i.ibb.co/kgM6FqZf/photo-2026-03-12-18-36-33.jpg") center/cover no-repeat;
+      z-index: -2;
+      animation: hidupBg 25s infinite alternate ease-in-out;
+      will-change: transform;
     }
 
+    /* Efek "hidup": zoom perlahan */
+    @keyframes hidupBg {
+      0% {
+        transform: scale(1);
+      }
+      100% {
+        transform: scale(1.08);
+      }
+    }
+
+    /* Overlay gelap agar konten tetap terbaca */
     body::after {
       content: "";
       position: fixed;
-      inset: 0;
-      background-image: 
-        url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50,30 Q60,20 70,30 Q80,40 70,50 Q60,60 50,50 Q40,60 30,50 Q20,40 30,30 Q40,20 50,30' fill='rgba(139,0,0,0.15)'/%3E%3Cpath d='M50,35 Q55,30 60,35 Q65,40 60,45 Q55,50 50,45 Q45,50 40,45 Q35,40 40,35 Q45,30 50,35' fill='rgba(178,34,34,0.1)'/%3E%3C/svg%3E"),
-        url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40,25 Q48,18 56,25 Q64,32 56,40 Q48,48 40,40 Q32,48 24,40 Q16,32 24,25 Q32,18 40,25' fill='rgba(165,42,42,0.12)'/%3E%3C/svg%3E"),
-        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30,18 Q36,12 42,18 Q48,24 42,30 Q36,36 30,30 Q24,36 18,30 Q12,24 18,18 Q24,12 30,18' fill='rgba(139,0,0,0.08)'/%3E%3C/svg%3E"),
-        url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20,12 Q24,8 28,12 Q32,16 28,20 Q24,24 20,20 Q16,24 12,20 Q8,16 12,12 Q16,8 20,12' fill='rgba(178,34,34,0.06)'/%3E%3C/svg%3E"),
-        url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15,9 Q18,6 21,9 Q24,12 21,15 Q18,18 15,15 Q12,18 9,15 Q6,12 9,9 Q12,6 15,9' fill='rgba(165,42,42,0.05)'/%3E%3C/svg%3E"),
-        url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10,6 Q12,4 14,6 Q16,8 14,10 Q12,12 10,10 Q8,12 6,10 Q4,8 6,6 Q8,4 10,6' fill='rgba(139,0,0,0.04)'/%3E%3C/svg%3E");
-      
-      background-size: 
-        100px 100px,
-        80px 80px,
-        60px 60px,
-        40px 40px,
-        30px 30px,
-        20px 20px;
-      
-      background-position: 
-        10% 10%,
-        85% 15%,
-        15% 85%,
-        90% 80%,
-        70% 30%,
-        30% 70%,
-        95% 60%,
-        5% 40%,
-        50% 20%,
-        80% 90%;
-      
-      background-repeat: no-repeat;
-      opacity: 0.4;
-      z-index: -2;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5); /* gelap, sesuaikan jika perlu */
+      z-index: -1;
       pointer-events: none;
-      
-      animation: floatRoses 30s infinite ease-in-out;
     }
 
-    @keyframes floatRoses {
-      0%, 100% { transform: translate(0, 0) rotate(0deg); }
-      25% { transform: translate(5px, 10px) rotate(1deg); }
-      50% { transform: translate(-3px, -5px) rotate(-1deg); }
-      75% { transform: translate(7px, -3px) rotate(0.5deg); }
-    }
-
+    /* ===== EFEK TAMBAHAN (BINTANG JATUH, MAWAR, DLL) TETAP ADA ===== */
     .falling-stars {
       position: fixed;
       top: 0;
@@ -248,69 +204,7 @@
       }
     }
 
-    .panel::before {
-      content: '';
-      position: absolute;
-      top: -10px;
-      left: -10px;
-      right: -10px;
-      bottom: -10px;
-      background: radial-gradient(circle at 50% 0%,
-        rgba(255, 100, 100, 0.1) 0%,
-        rgba(139, 0, 0, 0.05) 30%,
-        transparent 70%);
-      border-radius: 28px;
-      z-index: -1;
-      pointer-events: none;
-    }
-
-    #topTabs .tab-btn.active::before {
-      content: '';
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      right: -2px;
-      bottom: -2px;
-      background: linear-gradient(45deg,
-        rgba(255, 100, 100, 0.3),
-        rgba(139, 0, 0, 0.2),
-        rgba(255, 200, 200, 0.3));
-      border-radius: 12px;
-      z-index: -1;
-      animation: tabGlow 2s ease-in-out infinite alternate;
-    }
-
-    @keyframes tabGlow {
-      0% { opacity: 0.5; transform: scale(1); }
-      100% { opacity: 0.8; transform: scale(1.02); }
-    }
-
-    .controls button {
-      position: relative;
-      overflow: hidden;
-    }
-
-    .controls button::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(45deg,
-        transparent 30%,
-        rgba(255, 255, 255, 0.1) 50%,
-        transparent 70%);
-      transform: rotate(45deg);
-      animation: buttonShine 3s linear infinite;
-      pointer-events: none;
-    }
-
-    @keyframes buttonShine {
-      0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-      100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-    }
-
+    /* ===== LAYOUT UTAMA ===== */
     .app{
       width:100%;
       max-width:none;
