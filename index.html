@@ -123,8 +123,6 @@
     .btn-danger:hover{background:rgba(244,63,94,.28)}
     .btn-amber{background:rgba(245,158,11,.16)}
     .btn-amber:hover{background:rgba(245,158,11,.26)}
-    .btn-backup{background:rgba(34,197,94,.2)}
-    .btn-restore{background:rgba(245,158,11,.2)}
 
     .top-tabs{
       display:flex; gap:8px; align-items:center; justify-content:center;
@@ -1862,16 +1860,6 @@
       background: rgba(139,92,246,0.7);
     }
     
-    #undoBtn:not(:disabled):hover, #redoBtn:not(:disabled):hover {
-      transform: translateY(-1px);
-      background: rgba(245,158,11,0.26);
-    }
-    
-    #undoBtn:disabled, #redoBtn:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-    
     .slot-info {
       font-size: 11px;
       color: #FFD700;
@@ -1951,25 +1939,6 @@
       z-index: -3;
     }
     
-    #undoBtn:not(:disabled), #redoBtn:not(:disabled) {
-        background: linear-gradient(145deg,
-            #F59E0B 0%,
-            #FBBF24 25%,
-            #FCD34D 50%,
-            #FBBF24 75%,
-            #D97706 100%
-        ) !important;
-        color: #000000 !important;
-        border: 1px solid rgba(245, 158, 11, 0.7) !important;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-        font-weight: 900;
-    }
-    
-    #undoBtn:disabled, #redoBtn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    
     #resetBaganBtn {
         background: linear-gradient(145deg,
             #DC2626 0%,
@@ -2009,9 +1978,6 @@
     }
   </style>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 
 <body>
@@ -2040,10 +2006,6 @@
         <button id="next">Bulan depan →</button>
         <button id="bulkImport" class="btn-accent">📥 Import Excel</button>
         <button id="lockBtn" class="btn-amber">🔒 TERKUNCI</button>
-        <button id="backupDataBtn" class="btn-backup">💾 Backup Data</button>
-        <button id="restoreDataBtn" class="btn-restore">📂 Restore Data</button>
-        <button id="undoBtn" disabled>🌹</button>
-        <button id="redoBtn" disabled>🌹</button>
       </div>
     </div>
 
@@ -2392,19 +2354,6 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD0gaCXH6ny4EwLwhJhUVAZzS5x1nLjs-s",
-      authDomain: "dedy-b7d09.firebaseapp.com",
-      databaseURL: "https://dedy-b7d09-default-rtdb.firebaseio.com",
-      projectId: "dedy-b7d09",
-      storageBucket: "dedy-b7d09.appspot.com",
-      messagingSenderId: "908979972372",
-      appId: "1:908979972372:web:93ebb4eb1bf20ab8f42f0a1"
-    };
-    firebase.initializeApp(firebaseConfig);
-  </script>
-
-  <script>
     (() => {
       const $ = q => document.querySelector(q);
 
@@ -2442,358 +2391,8 @@
       });
 
       // =========================
-      // GLOBAL FIREBASE SYNC - PERBAIKAN MERGE
+      // STORAGE KEYS & DATA (HANYA LOCALSTORAGE, PERMANEN)
       // =========================
-      const GLOBAL_ROOM_ID = "mwtt-main";
-      const clientIdKey = "mwtt-client-id";
-      const clientId = localStorage.getItem(clientIdKey) || ("c_" + Math.random().toString(16).slice(2));
-      localStorage.setItem(clientIdKey, clientId);
-      const dbRef = firebase.database().ref("offday/" + GLOBAL_ROOM_ID);
-
-      let isApplyingRemote = false;
-      let lastRemoteUpdatedAt = 0;
-      let pushTimer = null;
-
-      function schedulePush() {
-        if (isApplyingRemote) return;
-        clearTimeout(pushTimer);
-        pushTimer = setTimeout(pushNow, 300);
-      }
-
-      function pushNow() {
-        if (isApplyingRemote) return;
-        const payload = {
-          updatedAt: Date.now(),
-          updatedBy: clientId,
-          calendar: store,
-          cuti: cutiStore,
-          bagan: { meta: baganMeta, seats: baganStore },
-          barisKolomExcel: barisKolomExcelData,
-          namaDatabase: namaDatabaseStore,
-          piket: piketStore,
-          csMawaroto: csStore,
-          catatan: catatanStore,
-          lock: { isLocked }
-        };
-        dbRef.set(payload).catch(err => console.error("GLOBAL SAVE ERR:", err));
-      }
-
-      function logDelete(action, detail) {
-        const logRef = firebase.database().ref('deleteLogs').push();
-        logRef.set({
-          user: "ADMIN (SISTEM)",
-          action: action,
-          detail: detail,
-          timestamp: Date.now(),
-          userAgent: navigator.userAgent
-        }).catch(err => console.error('Gagal menyimpan log:', err));
-      }
-
-      // PERBAIKAN: MERGE, BUKAN REPLACE
-      function applyRemote(payload) {
-        if (!payload) return;
-        const u = Number(payload.updatedAt || 0);
-        if (u && u <= lastRemoteUpdatedAt) return;
-
-        isApplyingRemote = true;
-        try {
-          lastRemoteUpdatedAt = u || lastRemoteUpdatedAt;
-
-          // CALENDAR: merge per key (tidak menghapus key yang tidak ada di payload)
-          if (payload.calendar && typeof payload.calendar === "object") {
-            for (let key in payload.calendar) {
-              store[key] = payload.calendar[key];
-            }
-            saveStore();
-          }
-
-          // CUTI: hanya update jika payload membawa data (jika kosong, jangan timpa)
-          if (Array.isArray(payload.cuti) && payload.cuti.length > 0) {
-            cutiStore.splice(0, cutiStore.length, ...payload.cuti);
-            saveCuti();
-          }
-
-          if (payload.bagan && typeof payload.bagan === "object") {
-            if (payload.bagan.meta) baganMeta = payload.bagan.meta;
-            if (Array.isArray(payload.bagan.seats)) baganStore = payload.bagan.seats;
-            saveBagan();
-          }
-
-          if (payload.barisKolomExcel) {
-            barisKolomExcelData = payload.barisKolomExcel;
-            saveBarisKolomExcel();
-          }
-
-          if (Array.isArray(payload.namaDatabase) && payload.namaDatabase.length > 0) {
-            namaDatabaseStore.splice(0, namaDatabaseStore.length, ...payload.namaDatabase);
-            saveNamaDatabase();
-          }
-
-          if (payload.piket && typeof payload.piket === "object") {
-            for (let day in payload.piket) {
-              if (Array.isArray(payload.piket[day])) {
-                piketStore[day] = payload.piket[day];
-              }
-            }
-            savePiket();
-          }
-
-          if (Array.isArray(payload.csMawaroto) && payload.csMawaroto.length > 0) {
-            csStore.splice(0, csStore.length, ...payload.csMawaroto);
-            saveCS();
-          }
-
-          if (Array.isArray(payload.catatan) && payload.catatan.length > 0) {
-            catatanStore.splice(0, catatanStore.length, ...payload.catatan);
-            saveCatatan();
-          }
-
-          if (payload.lock && typeof payload.lock.isLocked === "boolean") {
-            isLocked = payload.lock.isLocked;
-            updateLockUI();
-          }
-
-          // Refresh tampilan
-          if (activeFilterType === "CUTI") renderCutiTable();
-          else if (activeFilterType === "BAGAN_VIEW") { renderBagan(); updateDeleteSeatUI(); }
-          else if (activeFilterType === "BARI_KOLOM") renderBarisKolomTable();
-          else if (activeFilterType === "NAMA") { renderNamaDatabase(); updateNamaToBaganSelect(); }
-          else if (activeFilterType === "PIKET") renderPiketTable();
-          else if (activeFilterType === "CS_MAWAROTO") renderCSTable();
-          else if (activeFilterType === "CATATAN") renderCatatanList();
-          else renderCalendar();
-
-        } finally {
-          isApplyingRemote = false;
-        }
-      }
-
-      function startRealtimeSync() {
-        dbRef.on("value", snap => {
-          const payload = snap.val();
-          applyRemote(payload);
-        }, err => {
-          console.error("GLOBAL LOAD ERR:", err);
-        });
-      }
-
-      // =========================
-      // FITUR BACKUP & RESTORE MANUAL
-      // =========================
-      function backupAllData() {
-        const backup = {
-          timestamp: Date.now(),
-          store, cutiStore, baganMeta, baganStore, barisKolomExcelData, namaDatabaseStore, piketStore, csStore, catatanStore, isLocked
-        };
-        localStorage.setItem("mwtt_full_backup", JSON.stringify(backup));
-        toast("✅ Backup data berhasil disimpan ke browser");
-      }
-
-      function restoreAllData() {
-        const raw = localStorage.getItem("mwtt_full_backup");
-        if (!raw) { toast("Tidak ada backup tersedia"); return; }
-        try {
-          const b = JSON.parse(raw);
-          store = b.store || {};
-          cutiStore = b.cutiStore || [];
-          baganMeta = b.baganMeta || { rows: 10, cols: 20 };
-          baganStore = b.baganStore || Array.from({length:200}, ()=>({name:"", active:true, divisi:""}));
-          barisKolomExcelData = b.barisKolomExcelData || {};
-          namaDatabaseStore = b.namaDatabaseStore || [];
-          piketStore = b.piketStore || { SENIN:Array(8).fill(""), SELASA:Array(8).fill(""), RABU:Array(8).fill(""), KAMIS:Array(8).fill(""), JUMAT:Array(8).fill(""), SABTU:Array(8).fill(""), MINGGU:Array(8).fill("") };
-          csStore = b.csStore || [];
-          catatanStore = b.catatanStore || [];
-          isLocked = b.isLocked !== undefined ? b.isLocked : true;
-          
-          saveStore(); saveCuti(); saveBagan(); saveBarisKolomExcel(); saveNamaDatabase(); savePiket(); saveCS(); saveCatatan();
-          localStorage.setItem("offday-lock-state", isLocked);
-          updateLockUI();
-          
-          const active = document.querySelector(".tab-btn.active")?.dataset.type || "OFF";
-          if (active === "OFF") renderCalendar();
-          else if (active === "CUTI") renderCutiTable();
-          else if (active === "BAGAN_VIEW") renderBagan();
-          else if (active === "BARI_KOLOM") renderBarisKolomTable();
-          else if (active === "NAMA") { renderNamaDatabase(); updateNamaToBaganSelect(); }
-          else if (active === "PIKET") renderPiketTable();
-          else if (active === "CS_MAWAROTO") renderCSTable();
-          else if (active === "CATATAN") renderCatatanList();
-          
-          schedulePush();
-          toast("✅ Restore data berhasil dari backup manual");
-        } catch(e) { toast("Gagal restore: "+e.message); }
-      }
-
-      // =========================
-      // FITUR UNDO/REDO (CTRL+Z) UNTUK KALENDER
-      // =========================
-      let undoStack = [];
-      let redoStack = [];
-      const MAX_UNDO_HISTORY = 20;
-
-      function saveToUndoStack() {
-        if (activeKey && store[activeKey]) {
-          const snapshot = {
-            key: activeKey,
-            data: JSON.parse(JSON.stringify(store[activeKey]))
-          };
-          undoStack.push(snapshot);
-          if (undoStack.length > MAX_UNDO_HISTORY) undoStack.shift();
-          redoStack = [];
-        }
-      }
-
-      function undo() {
-        if (undoStack.length === 0) { toast("Tidak ada perubahan untuk di-undo"); return; }
-        const snapshot = undoStack.pop();
-        const currentState = store[snapshot.key] ? JSON.parse(JSON.stringify(store[snapshot.key])) : null;
-        if (currentState) redoStack.push({ key: snapshot.key, data: currentState });
-        store[snapshot.key] = snapshot.data;
-        saveStore();
-        if (activeKey === snapshot.key && $("#backdrop").style.display === "grid") {
-          const date = new Date(snapshot.key);
-          openCalendarModal(snapshot.key, date);
-        }
-        renderCalendar();
-        schedulePush();
-        toast("Undo berhasil");
-      }
-
-      function redo() {
-        if (redoStack.length === 0) { toast("Tidak ada perubahan untuk di-redo"); return; }
-        const snapshot = redoStack.pop();
-        const currentState = store[snapshot.key] ? JSON.parse(JSON.stringify(store[snapshot.key])) : null;
-        if (currentState) undoStack.push({ key: snapshot.key, data: currentState });
-        store[snapshot.key] = snapshot.data;
-        saveStore();
-        if (activeKey === snapshot.key && $("#backdrop").style.display === "grid") {
-          const date = new Date(snapshot.key);
-          openCalendarModal(snapshot.key, date);
-        }
-        renderCalendar();
-        schedulePush();
-        toast("Redo berhasil");
-      }
-
-      let baganUndoStack = [];
-      let baganRedoStack = [];
-      const MAX_BAGAN_UNDO = 20;
-
-      function saveBaganToUndoStack() {
-        const snapshot = {
-            meta: JSON.parse(JSON.stringify(baganMeta)),
-            seats: JSON.parse(JSON.stringify(baganStore)),
-            timestamp: Date.now(),
-            action: "bagan_change"
-        };
-        baganUndoStack.push(snapshot);
-        if (baganUndoStack.length > MAX_BAGAN_UNDO) baganUndoStack.shift();
-        baganRedoStack = [];
-        updateUndoRedoButtons();
-      }
-
-      function undoBagan() {
-        if (baganUndoStack.length === 0) { toast("Tidak ada perubahan bagan untuk di-undo"); return; }
-        const currentState = { meta: JSON.parse(JSON.stringify(baganMeta)), seats: JSON.parse(JSON.stringify(baganStore)), timestamp: Date.now(), action: "bagan_change" };
-        baganRedoStack.push(currentState);
-        const previousState = baganUndoStack.pop();
-        baganMeta = previousState.meta;
-        baganStore = previousState.seats;
-        saveBagan();
-        renderBagan();
-        schedulePush();
-        updateUndoRedoButtons();
-        toast("Undo perubahan bagan berhasil");
-      }
-
-      function redoBagan() {
-        if (baganRedoStack.length === 0) { toast("Tidak ada perubahan bagan untuk di-redo"); return; }
-        const currentState = { meta: JSON.parse(JSON.stringify(baganMeta)), seats: JSON.parse(JSON.stringify(baganStore)), timestamp: Date.now(), action: "bagan_change" };
-        baganUndoStack.push(currentState);
-        const nextState = baganRedoStack.pop();
-        baganMeta = nextState.meta;
-        baganStore = nextState.seats;
-        saveBagan();
-        renderBagan();
-        schedulePush();
-        updateUndoRedoButtons();
-        toast("Redo perubahan bagan berhasil");
-      }
-
-      function updateUndoRedoButtons() {
-        const undoBtn = $("#undoBtn");
-        const redoBtn = $("#redoBtn");
-        if (undoBtn) undoBtn.disabled = baganUndoStack.length === 0 && undoStack.length === 0;
-        if (redoBtn) redoBtn.disabled = baganRedoStack.length === 0 && redoStack.length === 0;
-      }
-
-      function handleBaganChange(action, callback) {
-        if(isLocked) { toast("Terkunci. Hanya bos yang bisa edit bagan."); return; }
-        saveBaganToUndoStack();
-        callback();
-      }
-
-      // APP ORIGINAL LOGIC (semua fungsi render, dll dari kode asli, tidak diubah)
-      const WEEKDAYS_ID = ["SENIN","SELASA","RABU","KAMIS","JUMAT","SABTU","MINGGU"];
-      const MONTHS_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
-
-      const ROLE_OPTIONS = [
-        { value: "", label: "Pilih Divisi", color: "#202741" },
-        { value: "FINANCE", label: "FINANCE", color: "#f7d88b" },
-        { value: "DESIGN", label: "DESIGN", color: "#7a3a00" },
-        { value: "LIVECHAT", label: "LIVECHAT", color: "#bfe3ff" },
-        { value: "SPV_WD", label: "SPV WD", color: "#1f5a6b" },
-        { value: "WORKER_WD", label: "WORKER WD", color: "#e5c9ff" },
-        { value: "DEPOSIT", label: "DEPOSIT", color: "#8B5CF6" },
-        { value: "BANKER", label: "BANKER", color: "#ebc480ff" },
-        { value: "ADMIN", label: "ADMIN", color: "#FB923C" },
-        { value: "WD PGA", label: "WD PGA", color: "#FB7185" },
-        { value: "ASSIST LEAD UTAMA", label: "ASSIST LEAD UTAMA", color: "#9F1239" },
-        { value: "QRIS", label: "QRIS", color: "#C4B5FD" },
-        { value: "PENGURUS", label: "PENGURUS", color: "#1E3A8A" },
-        { value: "WHATSAPP", label: "WHATSAPP", color: "#A3E635" },
-        { value: "TELEGRAM / SOSMED", label: "TELEGRAM / SOSMED", color: "#FF7F50" },
-        { value: "RESULT", label: "RESULT", color: "#ff50c5ff" },
-      ];
-      const ROLE_COLOR_MAP = Object.fromEntries(ROLE_OPTIONS.map(o => [o.value, o.color]));
-
-      const DIVISI_OPTIONS = [
-        { value: "LIVE_CHAT", label: "LIVE CHAT", color: "#3498db" },
-        { value: "WHATSAPP", label: "WHATSAPP", color: "#2ecc71" },
-        { value: "DEPOSIT", label: "DEPOSIT", color: "#9b59b6" },
-        { value: "DESIGN", label: "DESIGN", color: "#e74c3c" },
-        { value: "FINANCE", label: "FINANCE", color: "#f1c40f" },
-        { value: "BANKER", label: "BANKER", color: "#1abc9c" },
-        { value: "HELPER", label: "HELPER", color: "#34495e" },
-        { value: "ADMIN", label: "ADMIN", color: "#e67e22" },
-        { value: "MAKETING", label: "MAKETING", color: "#d35400" },
-        { value: "TELE_MARKETING", label: "TELE MARKETING", color: "#c0392b" },
-        { value: "RESULT", label: "RESULT", color: "#7f8c8d" },
-        { value: "REPORT_PHISING", label: "REPORT PHISING", color: "#16a085" },
-        { value: "WD_PGA", label: "WD PGA", color: "#8e44ad" },
-        { value: "WORKER_WD", label: "WORKER WD", color: "#1d3527ff" },
-        { value: "=", label: "=", color: "#16c5e4ff" },
-        { value: "SPV_WD", label: "SPV WD", color: "#92c5e7ff" },
-        { value: "MASTER", label: "MASTER", color: "#f39c12" },
-        { value: "TELEGRAM / SOSMED", label: "TELEGRAM / SOSMED", color: "#89a789ff" },
-        { value: "*", label: "*", color: "#ff008cff" },
-        { value: "-", label: "-", color: "#6e4400ff" },
-        { value: "QRIS", label: "QRIS", color: "#d35400" },
-        { value: "PENGURUS", label: "PENGURUS", color: "#1E3A8A" },
-      ];
-
-      const TYPE_OPTIONS = [
-        { value:"OFF", label:"OFFDAY" },
-        { value:"BAGAN", label:"BAGAN" }
-      ];
-
-      const EDIT_PASSWORD = "mawartoto12";
-      const lockKey = "offday-lock-state";
-      let isLocked = (localStorage.getItem(lockKey) ?? "true") === "true";
-
-      let passwordCallback = null;
-      let resetPanelName = "";
-
       const storeKey = "offday-v5";
       const store = JSON.parse(localStorage.getItem(storeKey) || "{}");
       const saveStore = () => localStorage.setItem(storeKey, JSON.stringify(store));
@@ -2804,7 +2403,6 @@
 
       const baganKey = "bagan-v3";
       const baganMetaKey = "bagan-meta-v1";
-
       let baganMeta = JSON.parse(localStorage.getItem(baganMetaKey) || "null") || { rows: 10, cols: 20 };
       function BAGAN_ROWS(){ return baganMeta.rows; }
       function BAGAN_COLS(){ return baganMeta.cols; }
@@ -2867,6 +2465,66 @@
       const csStore = JSON.parse(localStorage.getItem(csKey) || "null") || csDefault.slice();
       const saveCS = () => localStorage.setItem(csKey, JSON.stringify(csStore));
 
+      const catatanKey = "catatan-v1";
+      const catatanStore = JSON.parse(localStorage.getItem(catatanKey) || "[]");
+      const saveCatatan = () => localStorage.setItem(catatanKey, JSON.stringify(catatanStore));
+
+      // =========================
+      // KONSTANTA & FUNGSI UTILITY
+      // =========================
+      const WEEKDAYS_ID = ["SENIN","SELASA","RABU","KAMIS","JUMAT","SABTU","MINGGU"];
+      const MONTHS_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+      const ROLE_OPTIONS = [
+        { value: "", label: "Pilih Divisi", color: "#202741" },
+        { value: "FINANCE", label: "FINANCE", color: "#f7d88b" },
+        { value: "DESIGN", label: "DESIGN", color: "#7a3a00" },
+        { value: "LIVECHAT", label: "LIVECHAT", color: "#bfe3ff" },
+        { value: "SPV_WD", label: "SPV WD", color: "#1f5a6b" },
+        { value: "WORKER_WD", label: "WORKER WD", color: "#e5c9ff" },
+        { value: "DEPOSIT", label: "DEPOSIT", color: "#8B5CF6" },
+        { value: "BANKER", label: "BANKER", color: "#ebc480ff" },
+        { value: "ADMIN", label: "ADMIN", color: "#FB923C" },
+        { value: "WD PGA", label: "WD PGA", color: "#FB7185" },
+        { value: "ASSIST LEAD UTAMA", label: "ASSIST LEAD UTAMA", color: "#9F1239" },
+        { value: "QRIS", label: "QRIS", color: "#C4B5FD" },
+        { value: "PENGURUS", label: "PENGURUS", color: "#1E3A8A" },
+        { value: "WHATSAPP", label: "WHATSAPP", color: "#A3E635" },
+        { value: "TELEGRAM / SOSMED", label: "TELEGRAM / SOSMED", color: "#FF7F50" },
+        { value: "RESULT", label: "RESULT", color: "#ff50c5ff" },
+      ];
+      const ROLE_COLOR_MAP = Object.fromEntries(ROLE_OPTIONS.map(o => [o.value, o.color]));
+
+      const DIVISI_OPTIONS = [
+        { value: "LIVE_CHAT", label: "LIVE CHAT", color: "#3498db" },
+        { value: "WHATSAPP", label: "WHATSAPP", color: "#2ecc71" },
+        { value: "DEPOSIT", label: "DEPOSIT", color: "#9b59b6" },
+        { value: "DESIGN", label: "DESIGN", color: "#e74c3c" },
+        { value: "FINANCE", label: "FINANCE", color: "#f1c40f" },
+        { value: "BANKER", label: "BANKER", color: "#1abc9c" },
+        { value: "HELPER", label: "HELPER", color: "#34495e" },
+        { value: "ADMIN", label: "ADMIN", color: "#e67e22" },
+        { value: "MAKETING", label: "MAKETING", color: "#d35400" },
+        { value: "TELE_MARKETING", label: "TELE MARKETING", color: "#c0392b" },
+        { value: "RESULT", label: "RESULT", color: "#7f8c8d" },
+        { value: "REPORT_PHISING", label: "REPORT PHISING", color: "#16a085" },
+        { value: "WD_PGA", label: "WD PGA", color: "#8e44ad" },
+        { value: "WORKER_WD", label: "WORKER WD", color: "#1d3527ff" },
+        { value: "=", label: "=", color: "#16c5e4ff" },
+        { value: "SPV_WD", label: "SPV WD", color: "#92c5e7ff" },
+        { value: "MASTER", label: "MASTER", color: "#f39c12" },
+        { value: "TELEGRAM / SOSMED", label: "TELEGRAM / SOSMED", color: "#89a789ff" },
+        { value: "*", label: "*", color: "#ff008cff" },
+        { value: "-", label: "-", color: "#6e4400ff" },
+        { value: "QRIS", label: "QRIS", color: "#d35400" },
+        { value: "PENGURUS", label: "PENGURUS", color: "#1E3A8A" },
+      ];
+
+      const TYPE_OPTIONS = [
+        { value:"OFF", label:"OFFDAY" },
+        { value:"BAGAN", label:"BAGAN" }
+      ];
+
       const CS_JOB_OPTIONS = [
         { value:"", label:"Pilih Jobdesk", color:"#202741" },
         { value:"LIVECHAT", label:"LIVECHAT", color:"#bfe3ff" },
@@ -2887,9 +2545,9 @@
         { value:"RESULT", label:"RESULT", color:"#52525B" },
       ];
 
-      const catatanKey = "catatan-v1";
-      const catatanStore = JSON.parse(localStorage.getItem(catatanKey) || "[]");
-      const saveCatatan = () => localStorage.setItem(catatanKey, JSON.stringify(catatanStore));
+      const EDIT_PASSWORD = "mawartoto12";
+      const lockKey = "offday-lock-state";
+      let isLocked = (localStorage.getItem(lockKey) ?? "true") === "true";
 
       let view = new Date();
       let activeKey = null;
@@ -2931,7 +2589,6 @@
       }
 
       function openPasswordModal(title, sub, callback, panelName = "") {
-        resetPanelName = panelName;
         passwordCallback = callback;
         $("#passwordModalTitle").textContent = title;
         $("#passwordModalSub").textContent = sub;
@@ -2940,10 +2597,10 @@
         setTimeout(() => $("#passwordInput").focus(), 100);
       }
 
+      let passwordCallback = null;
       function closePasswordModal() {
         $("#passwordBackdrop").style.display = "none";
         passwordCallback = null;
-        resetPanelName = "";
       }
 
       $("#passwordCancelBtn").onclick = closePasswordModal;
@@ -2989,13 +2646,11 @@
         if (!isLocked) {
           isLocked = true;
           updateLockUI();
-          schedulePush();
           toast("Mode terkunci");
         } else {
           openPasswordModal("Buka Mode Edit","Masukkan password untuk mengaktifkan mode edit",()=>{
             isLocked = false;
             updateLockUI();
-            schedulePush();
             toast("Edit mode aktif");
           });
         }
@@ -3093,7 +2748,6 @@
       }
 
       function openCalendarModal(key,date){
-        saveToUndoStack();
         ensureDay(key);
         const type=store[key].type||"OFF";
         $("#modalTitle").textContent = "Jadwal: "+WEEKDAYS_ID[(date.getDay()+6)%7]+", "+date.getDate()+" "+MONTHS_ID[date.getMonth()]+" "+date.getFullYear();
@@ -3131,7 +2785,7 @@
           select.addEventListener("change",()=>{ store[key].entries[i].role=select.value; applyColor(); refreshCopyBox(); });
           applyColor();
         }
-        typeSelect.onchange=()=>{ store[key].type=typeSelect.value; store[key].off=true; saveStore(); refreshCopyBox(); renderCalendar(); schedulePush(); };
+        typeSelect.onchange=()=>{ store[key].type=typeSelect.value; store[key].off=true; saveStore(); refreshCopyBox(); renderCalendar(); };
         refreshCopyBox();
         $("#backdrop").style.display="grid";
       }
@@ -3140,26 +2794,24 @@
       $("#cancel").onclick=closeCalendarModal;
       $("#save").onclick=()=>{
         if(!activeKey) return;
-        if(store[activeKey].blocked){ saveStore(); closeCalendarModal(); renderCalendar(); schedulePush(); return; }
+        if(store[activeKey].blocked){ saveStore(); closeCalendarModal(); renderCalendar(); return; }
         const inputs=[...$("#modalNames").querySelectorAll("input")];
         const selects=[...$("#modalNames").querySelectorAll("select")];
         inputs.forEach(inp=>{ const i=Number(inp.dataset.i); store[activeKey].entries[i].name=inp.value; });
         selects.forEach(sel=>{ const i=Number(sel.dataset.i); store[activeKey].entries[i].role=sel.value; });
         store[activeKey].off=true;
         store[activeKey].type=store[activeKey].type||"OFF";
-        saveStore(); closeCalendarModal(); renderCalendar(); schedulePush();
+        saveStore(); closeCalendarModal(); renderCalendar();
       };
       $("#deleteOff").onclick=()=>{
         if(!activeKey) return;
         if(confirm("Hapus seluruh jadwal di tanggal ini?")){
-          saveToUndoStack();
           const key = activeKey;
           store[key].off=false;
           store[key].type="OFF";
           store[key].entries=Array.from({length:10},()=>({name:"",role:""}));
           if(!store[key].blocked) delete store[key];
-          saveStore(); closeCalendarModal(); renderCalendar(); schedulePush();
-          logDelete('HAPUS_JADWAL_OFF', `Tanggal: ${key}`);
+          saveStore(); closeCalendarModal(); renderCalendar();
           toast(`Jadwal dihapus oleh ADMIN`);
         }
       };
@@ -3171,21 +2823,21 @@
           store[activeKey].off=false;
           store[activeKey].entries=Array.from({length:10},()=>({name:"",role:""}));
         } else { store[activeKey].type=store[activeKey].type||"OFF"; }
-        saveStore(); closeCalendarModal(); renderCalendar(); schedulePush();
+        saveStore(); closeCalendarModal(); renderCalendar();
       };
       $("#copyBtn").onclick = async ()=>{ const txt=$("#copyBox").value.trim(); if(!txt){ toast("Belum ada nama"); return; } try{ await navigator.clipboard.writeText(txt); toast("Tersalin ke clipboard"); }catch(e){ toast("Gagal auto copy, silakan copy manual"); $("#copyBox").focus(); $("#copyBox").select(); } };
       function fmtDateID(iso){ if(!iso) return "-"; const d=new Date(iso); return d.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}); }
       function renderCutiTable(){
         const body=$("#cutiTableBody");
         body.innerHTML="";
-        if(cutiStore.length===0){ body.innerHTML = '似乎<td colspan="4" style="padding:16px; opacity:.7;">Belum ada data cuti. 似乎  <tr>'; return; }
+        if(cutiStore.length===0){ body.innerHTML = '<tr><td colspan="4" style="padding:16px; opacity:.7;">Belum ada data cuti.</td></tr>'; return; }
         cutiStore.forEach((row,idx)=>{
           const tr=document.createElement("tr");
           tr.innerHTML='<td class="name">'+(row.name||"-")+'</td><td>'+fmtDateID(row.start)+'</td><td>'+fmtDateID(row.end)+'</td><td><button class="info-btn" data-idx="'+idx+'">Detail</button>'+(isLocked?'':'<button class="del-btn" data-del="'+idx+'">Hapus</button>')+'</td>';
           body.appendChild(tr);
         });
         body.querySelectorAll(".info-btn").forEach(btn=>{ btn.onclick=()=>{ const idx=Number(btn.dataset.idx); openCutiModal(idx); }; });
-        body.querySelectorAll(".del-btn").forEach(btn=>{ btn.onclick=()=>{ if(isLocked) return; const idx=Number(btn.dataset.del); if(confirm("Hapus data CUTI ini?")){ const deletedData=cutiStore[idx]; cutiStore.splice(idx,1); saveCuti(); renderCutiTable(); schedulePush(); logDelete('HAPUS_CUTI',`Nama: ${deletedData.name}, Tanggal: ${deletedData.start} - ${deletedData.end}`); toast(`Data CUTI dihapus oleh ADMIN`); } }; });
+        body.querySelectorAll(".del-btn").forEach(btn=>{ btn.onclick=()=>{ if(isLocked) return; const idx=Number(btn.dataset.del); if(confirm("Hapus data CUTI ini?")){ cutiStore.splice(idx,1); saveCuti(); renderCutiTable(); toast(`Data CUTI dihapus oleh ADMIN`); } }; });
       }
       function openCutiModal(idx=null){
         if(idx===null && isLocked){ toast("Terkunci. Tidak bisa tambah CUTI."); return; }
@@ -3206,15 +2858,13 @@
         if(!data.name || !data.start || !data.end){ toast("Nama & tanggal wajib diisi"); return; }
         if(editingCutiIndex===null) cutiStore.push(data);
         else cutiStore[editingCutiIndex]=data;
-        saveCuti(); renderCutiTable(); closeCutiModal(); schedulePush();
+        saveCuti(); renderCutiTable(); closeCutiModal();
       };
       $("#cutiDeleteBtn").onclick=()=>{
         if(isLocked || editingCutiIndex===null) return;
         if(confirm("Hapus data CUTI ini?")){
-          const deletedData=cutiStore[editingCutiIndex];
           cutiStore.splice(editingCutiIndex,1);
-          saveCuti(); renderCutiTable(); closeCutiModal(); schedulePush();
-          logDelete('HAPUS_CUTI',`Nama: ${deletedData.name}, Tanggal: ${deletedData.start} - ${deletedData.end}`);
+          saveCuti(); renderCutiTable(); closeCutiModal();
           toast("Data CUTI dihapus oleh ADMIN");
         }
       };
@@ -3252,10 +2902,8 @@
             if(deleteSeatMode){
               if(!baganStore[i].active){ toast("Seat "+seatLabel(i)+" sudah dihapus"); return; }
               if(!confirm("Hapus seat "+seatLabel(i)+"? Kotak akan hilang.")) return;
-              const deletedSeat = { ...baganStore[i] };
               baganStore[i].name = ""; baganStore[i].divisi = ""; baganStore[i].active = false;
-              saveBagan(); renderBagan(); schedulePush();
-              logDelete('HAPUS_SEAT_BAGAN', `Nomor seat: ${i+1}, Nama sebelumnya: ${deletedSeat.name}`);
+              saveBagan(); renderBagan();
               toast(`Seat ${seatLabel(i)} dihapus oleh ADMIN`);
               return;
             }
@@ -3274,12 +2922,11 @@
             const tmp = baganStore[from];
             baganStore[from]=baganStore[to];
             baganStore[to]=tmp;
-            saveBagan(); renderBagan(); schedulePush();
+            saveBagan(); renderBagan();
             toast("Swap seat "+seatLabel(from)+" ↔ "+seatLabel(to));
           });
           board.appendChild(div);
         });
-        updateUndoRedoButtons();
       }
       function openBaganSeatModal(index) {
         const seat = baganStore[index];
@@ -3291,24 +2938,23 @@
         modal.style.display = 'grid';
         document.getElementById('baganSeatCancel').onclick = () => { modal.remove(); };
         document.getElementById('baganSeatSave').onclick = () => {
-          saveBaganToUndoStack();
           const name = document.getElementById('baganSeatName').value.trim();
           const divisi = document.getElementById('baganSeatDivisi').value;
           baganStore[index].name = name;
           baganStore[index].divisi = divisi;
           baganStore[index].active = true;
-          saveBagan(); renderBagan(); schedulePush(); modal.remove();
+          saveBagan(); renderBagan(); modal.remove();
           toast(`Seat ${seatLabel(index)} ${name ? 'diupdate' : 'dikosongkan'}`);
         };
         const select = document.getElementById('baganSeatDivisi');
         select.addEventListener('change', function() { const selectedOption = this.options[this.selectedIndex]; if (selectedOption.value) { const color = DIVISI_OPTIONS.find(d=>d.value===selectedOption.value)?.color||'#34495e'; this.style.background = color; this.style.color = isDark(color)?'#fff':'#000'; } else { this.style.background = '#202741'; this.style.color = '#eef2ff'; } });
         select.dispatchEvent(new Event('change'));
       }
-      function resetBagan() { if(isLocked){ toast("Terkunci. Hanya bos yang bisa reset bagan."); return; } if(!confirm("Reset seluruh bagan ke default?\n\nSemua nama akan dihapus, bagan dikembalikan ke 10 baris x 20 kolom.\n\nAksi ini TIDAK BISA di-undo!")) return; const oldSeats=baganStore.map(s=>({name:s.name,divisi:s.divisi})); baganMeta={rows:10,cols:20}; baganStore=Array.from({length:200},()=>({name:"",active:true,divisi:""})); saveBagan(); renderBagan(); schedulePush(); logDelete('RESET_BAGAN',`Menghapus semua data bagan. Seats sebelumnya: ${JSON.stringify(oldSeats)}`); toast("Bagan direset ke default (10 baris x 20 kolom) oleh ADMIN"); }
+      function resetBagan() { if(isLocked){ toast("Terkunci. Hanya bos yang bisa reset bagan."); return; } if(!confirm("Reset seluruh bagan ke default?\n\nSemua nama akan dihapus, bagan dikembalikan ke 10 baris x 20 kolom.\n\nAksi ini TIDAK BISA di-undo!")) return; baganMeta={rows:10,cols:20}; baganStore=Array.from({length:200},()=>({name:"",active:true,divisi:""})); saveBagan(); renderBagan(); toast("Bagan direset ke default (10 baris x 20 kolom) oleh ADMIN"); }
       $("#resetBaganBtn").onclick = resetBagan;
-      $("#addRowBtn").onclick = () => { handleBaganChange("add_row",()=>{ baganMeta.rows+=1; ensureBaganSize(); saveBagan(); renderBagan(); schedulePush(); toast("Baris ditambah. Total: "+baganMeta.rows); }); };
-      $("#addColBtn").onclick = () => { handleBaganChange("add_col",()=>{ baganMeta.cols+=1; ensureBaganSize(); saveBagan(); renderBagan(); schedulePush(); toast("Kolom ditambah. Total: "+baganMeta.cols); }); };
-      $("#removeColBtn").onclick = () => { handleBaganChange("remove_col",()=>{ const cols=baganMeta.cols, rows=baganMeta.rows; if(cols<=1){ toast("Kolom minimal 1"); return; } const input=prompt("Mau hapus kolom ke berapa?\n\nTotal kolom sekarang: "+cols+"\nIsi angka 1 - "+cols,String(cols)); if(input===null) return; const colToRemove=Number(input); if(!Number.isInteger(colToRemove)||colToRemove<1||colToRemove>cols){ toast("Nomor kolom tidak valid"); return; } if(!confirm("Yakin hapus kolom ke-"+colToRemove+"?\nSemua nama di kolom ini akan hilang.")) return; const oldCols=cols; const removeIndexInRow=colToRemove-1; const deletedSeats=[]; for(let r=0;r<rows;r++){ const idx=r*oldCols+removeIndexInRow; if(idx<baganStore.length){ deletedSeats.push({row:r+1,col:colToRemove,seat:{...baganStore[idx]}}); } } for(let r=rows-1;r>=0;r--){ const idx=r*oldCols+removeIndexInRow; baganStore.splice(idx,1); } baganMeta.cols-=1; ensureBaganSize(); saveBagan(); renderBagan(); schedulePush(); logDelete('HAPUS_KOLOM_BAGAN',`Kolom ke-${colToRemove} dihapus. Data: ${JSON.stringify(deletedSeats)}`); toast("Kolom ke-"+colToRemove+" dihapus oleh ADMIN"); }); };
+      $("#addRowBtn").onclick = () => { if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } baganMeta.rows+=1; ensureBaganSize(); saveBagan(); renderBagan(); toast("Baris ditambah. Total: "+baganMeta.rows); };
+      $("#addColBtn").onclick = () => { if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } baganMeta.cols+=1; ensureBaganSize(); saveBagan(); renderBagan(); toast("Kolom ditambah. Total: "+baganMeta.cols); };
+      $("#removeColBtn").onclick = () => { if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } const cols=baganMeta.cols, rows=baganMeta.rows; if(cols<=1){ toast("Kolom minimal 1"); return; } const input=prompt("Mau hapus kolom ke berapa?\n\nTotal kolom sekarang: "+cols+"\nIsi angka 1 - "+cols,String(cols)); if(input===null) return; const colToRemove=Number(input); if(!Number.isInteger(colToRemove)||colToRemove<1||colToRemove>cols){ toast("Nomor kolom tidak valid"); return; } if(!confirm("Yakin hapus kolom ke-"+colToRemove+"?\nSemua nama di kolom ini akan hilang.")) return; const oldCols=cols; const removeIndexInRow=colToRemove-1; for(let r=rows-1;r>=0;r--){ const idx=r*oldCols+removeIndexInRow; baganStore.splice(idx,1); } baganMeta.cols-=1; ensureBaganSize(); saveBagan(); renderBagan(); toast("Kolom ke-"+colToRemove+" dihapus oleh ADMIN"); };
       $("#exportBaganBtn").onclick=async ()=>{ const lines=baganStore.map((s,i)=>{ const seatNum=seatLabel(i); const name=s.name||"-"; const divisi=s.divisi?` (${getDivisiLabel(s.divisi)})`:""; const status=s.active===false?" [DELETED]":""; return `${seatNum}: ${name}${divisi}${status}`; }); const txt=lines.join("\n"); try{ await navigator.clipboard.writeText(txt); toast("BAGAN dicopy"); }catch(e){ prompt("Copy manual (CTRL+C):",txt); toast("Gagal auto copy, copy manual"); } };
       function renderBarisKolomTable() {
         const container = $("#barisKolomTableContainer");
@@ -3316,7 +2962,7 @@
         const kolomNames = ["LIVE CHAT", "WHATSAPP", "DEPOSIT", "FINANCE", "WHITDRAW", "DESIGN"];
         let html = `<table class="baris-kolom-excel-table"><thead><tr><th>NO</th>`;
         for (let i = 0; i < 6; i++) html += `<th><div class="kolom-header"><span class="kolom-title">${kolomNames[i]}</span><button class="copy-kolom-excel-btn" data-kolom="${i}">COPY</button></div></th>`;
-        html += `</tr></thead><tbody>`;
+        html += `</thead><tbody>`;
         for (let row = 0; row < 31; row++) {
           html += `<tr><td>${row+1}</td>`;
           for (let col = 0; col < 6; col++) {
@@ -3327,8 +2973,8 @@
         }
         html += `</tbody></table>`;
         container.innerHTML = html;
-        container.querySelectorAll(".excel-nama-input").forEach(input => { input.addEventListener("input", (e) => { const row=parseInt(e.target.dataset.row); const col=parseInt(e.target.dataset.col); const type=e.target.dataset.type; if(!barisKolomExcelData[row]) barisKolomExcelData[row]=[]; if(!barisKolomExcelData[row][col]) barisKolomExcelData[row][col]={nama1:"",nama2:"",nama3:"",nama4:"",tanggal:""}; barisKolomExcelData[row][col][type]=e.target.value; saveBarisKolomExcel(); schedulePush(); }); });
-        container.querySelectorAll(".excel-date-input").forEach(input => { input.addEventListener("change", (e) => { const row=parseInt(e.target.dataset.row); const col=parseInt(e.target.dataset.col); const type=e.target.dataset.type; if(!barisKolomExcelData[row]) barisKolomExcelData[row]=[]; if(!barisKolomExcelData[row][col]) barisKolomExcelData[row][col]={nama1:"",nama2:"",nama3:"",nama4:"",tanggal:""}; barisKolomExcelData[row][col][type]=e.target.value; saveBarisKolomExcel(); schedulePush(); }); });
+        container.querySelectorAll(".excel-nama-input").forEach(input => { input.addEventListener("input", (e) => { const row=parseInt(e.target.dataset.row); const col=parseInt(e.target.dataset.col); const type=e.target.dataset.type; if(!barisKolomExcelData[row]) barisKolomExcelData[row]=[]; if(!barisKolomExcelData[row][col]) barisKolomExcelData[row][col]={nama1:"",nama2:"",nama3:"",nama4:"",tanggal:""}; barisKolomExcelData[row][col][type]=e.target.value; saveBarisKolomExcel(); }); });
+        container.querySelectorAll(".excel-date-input").forEach(input => { input.addEventListener("change", (e) => { const row=parseInt(e.target.dataset.row); const col=parseInt(e.target.dataset.col); const type=e.target.dataset.type; if(!barisKolomExcelData[row]) barisKolomExcelData[row]=[]; if(!barisKolomExcelData[row][col]) barisKolomExcelData[row][col]={nama1:"",nama2:"",nama3:"",nama4:"",tanggal:""}; barisKolomExcelData[row][col][type]=e.target.value; saveBarisKolomExcel(); }); });
         container.querySelectorAll(".copy-kolom-excel-btn").forEach(btn => { btn.addEventListener("click", async (e) => { const kolom=parseInt(e.target.dataset.kolom); let allNames=[]; for(let row=0;row<31;row++){ const cell=barisKolomExcelData[row]?.[kolom]||{nama1:"",nama2:"",nama3:"",nama4:""}; const cellNames=[cell.nama1?.trim(),cell.nama2?.trim(),cell.nama3?.trim(),cell.nama4?.trim()].filter(n=>n&&n!==""); if(cellNames.length>0) allNames.push(cellNames.join(", ")); } const text=allNames.join("\n"); if(!text){ toast("Kolom ini kosong"); return; } try{ await navigator.clipboard.writeText(text); toast(`Kolom ${kolomNames[kolom]} dicopy: ${allNames.length} baris`); }catch(err){ prompt("Copy manual (Ctrl+C):",text); toast("Gagal auto copy, copy manual"); } }); });
       }
       function renderNamaDatabase() {
@@ -3341,12 +2987,12 @@
         container.querySelectorAll(".nama-item-btn.delete").forEach(btn=>{ btn.addEventListener("click",(e)=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa hapus."); return; } const idx=parseInt(e.target.dataset.index); deleteNamaStaff(idx); }); });
       }
       function updateNamaToBaganSelect(){ const select=$("#namaToBaganSelect"); if(!select) return; const selectedValue=select.value; select.innerHTML='<option value="">Pilih Staff</option>'; namaDatabaseStore.forEach((staff,idx)=>{ const option=document.createElement("option"); option.value=idx; option.textContent=`${staff.name} (${staff.divisi||"-"})`; select.appendChild(option); }); if(selectedValue&&selectedValue!=="") select.value=selectedValue; }
-      function addNamaStaff(){ if(isLocked){ toast("Terkunci. Hanya bos yang bisa tambah staff."); return; } const nameInput=$("#namaInput"); const divisiSelect=$("#divisiSelect"); const name=nameInput.value.trim(); const divisi=divisiSelect.value; if(!name){ toast("Nama staff tidak boleh kosong"); return; } const existing=namaDatabaseStore.find(s=>s.name.toLowerCase()===name.toLowerCase()); if(existing){ toast("Nama staff sudah ada dalam database"); return; } namaDatabaseStore.push({name,divisi}); saveNamaDatabase(); renderNamaDatabase(); updateNamaToBaganSelect(); nameInput.value=""; divisiSelect.value=""; schedulePush(); toast("Staff ditambahkan: "+name); }
-      function editNamaStaff(idx){ if(isLocked) return; const staff=namaDatabaseStore[idx]; const newName=prompt("Edit nama staff:",staff.name); if(newName===null) return; const trimmed=newName.trim(); if(!trimmed){ toast("Nama staff tidak boleh kosong"); return; } const existing=namaDatabaseStore.find((s,i)=>i!==idx && s.name.toLowerCase()===trimmed.toLowerCase()); if(existing){ toast("Nama staff sudah ada dalam database"); return; } const newDivisi=prompt("Edit divisi staff:",staff.divisi||""); if(newDivisi===null) return; namaDatabaseStore[idx]={name:trimmed,divisi:newDivisi.trim()}; saveNamaDatabase(); renderNamaDatabase(); updateNamaToBaganSelect(); schedulePush(); toast("Staff diupdate: "+trimmed); }
-      function deleteNamaStaff(idx){ if(isLocked) return; if(!confirm("Hapus staff dari database?")) return; const deleted=namaDatabaseStore.splice(idx,1)[0]; saveNamaDatabase(); renderNamaDatabase(); updateNamaToBaganSelect(); schedulePush(); toast("Staff dihapus: "+deleted.name); }
-      function addToBagan(){ if(isLocked){ toast("Terkunci. Hanya bos yang bisa tambah ke bagan."); return; } const select=$("#namaToBaganSelect"); const idx=parseInt(select.value); if(isNaN(idx)||idx<0||idx>=namaDatabaseStore.length){ toast("Pilih staff terlebih dahulu"); return; } const staff=namaDatabaseStore[idx]; let emptySeatIndex=-1; for(let i=0;i<baganStore.length;i++){ if(baganStore[i].active&&!baganStore[i].name){ emptySeatIndex=i; break; } } if(emptySeatIndex===-1){ toast("Tidak ada seat kosong di bagan. Tambah baris/kolom terlebih dahulu."); return; } saveBaganToUndoStack(); baganStore[emptySeatIndex]={name:staff.name,divisi:staff.divisi,active:true}; saveBagan(); renderBagan(); schedulePush(); toast(`${staff.name} ditambahkan ke seat ${seatLabel(emptySeatIndex)}`); select.value=""; }
+      function addNamaStaff(){ if(isLocked){ toast("Terkunci. Hanya bos yang bisa tambah staff."); return; } const nameInput=$("#namaInput"); const divisiSelect=$("#divisiSelect"); const name=nameInput.value.trim(); const divisi=divisiSelect.value; if(!name){ toast("Nama staff tidak boleh kosong"); return; } const existing=namaDatabaseStore.find(s=>s.name.toLowerCase()===name.toLowerCase()); if(existing){ toast("Nama staff sudah ada dalam database"); return; } namaDatabaseStore.push({name,divisi}); saveNamaDatabase(); renderNamaDatabase(); updateNamaToBaganSelect(); nameInput.value=""; divisiSelect.value=""; toast("Staff ditambahkan: "+name); }
+      function editNamaStaff(idx){ if(isLocked) return; const staff=namaDatabaseStore[idx]; const newName=prompt("Edit nama staff:",staff.name); if(newName===null) return; const trimmed=newName.trim(); if(!trimmed){ toast("Nama staff tidak boleh kosong"); return; } const existing=namaDatabaseStore.find((s,i)=>i!==idx && s.name.toLowerCase()===trimmed.toLowerCase()); if(existing){ toast("Nama staff sudah ada dalam database"); return; } const newDivisi=prompt("Edit divisi staff:",staff.divisi||""); if(newDivisi===null) return; namaDatabaseStore[idx]={name:trimmed,divisi:newDivisi.trim()}; saveNamaDatabase(); renderNamaDatabase(); updateNamaToBaganSelect(); toast("Staff diupdate: "+trimmed); }
+      function deleteNamaStaff(idx){ if(isLocked) return; if(!confirm("Hapus staff dari database?")) return; namaDatabaseStore.splice(idx,1); saveNamaDatabase(); renderNamaDatabase(); updateNamaToBaganSelect(); toast("Staff dihapus"); }
+      function addToBagan(){ if(isLocked){ toast("Terkunci. Hanya bos yang bisa tambah ke bagan."); return; } const select=$("#namaToBaganSelect"); const idx=parseInt(select.value); if(isNaN(idx)||idx<0||idx>=namaDatabaseStore.length){ toast("Pilih staff terlebih dahulu"); return; } const staff=namaDatabaseStore[idx]; let emptySeatIndex=-1; for(let i=0;i<baganStore.length;i++){ if(baganStore[i].active&&!baganStore[i].name){ emptySeatIndex=i; break; } } if(emptySeatIndex===-1){ toast("Tidak ada seat kosong di bagan. Tambah baris/kolom terlebih dahulu."); return; } baganStore[emptySeatIndex]={name:staff.name,divisi:staff.divisi,active:true}; saveBagan(); renderBagan(); toast(`${staff.name} ditambahkan ke seat ${seatLabel(emptySeatIndex)}`); select.value=""; }
       function setupExcelEvents(){
-        $("#addExcelRowBtn").onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa tambah baris."); return; } const count=prompt("Tambah berapa baris?","5"); if(!count||isNaN(count)) return; const numRows=parseInt(count); if(numRows<=0) return; const currentRows=Object.keys(barisKolomExcelData).length; for(let row=currentRows;row<currentRows+numRows;row++){ if(!barisKolomExcelData[row]){ barisKolomExcelData[row]=[]; for(let col=0;col<6;col++) barisKolomExcelData[row][col]={nama1:"",nama2:"",nama3:"",nama4:"",tanggal:""}; } } saveBarisKolomExcel(); renderBarisKolomTable(); schedulePush(); toast(`${numRows} baris ditambahkan`); };
+        $("#addExcelRowBtn").onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa tambah baris."); return; } const count=prompt("Tambah berapa baris?","5"); if(!count||isNaN(count)) return; const numRows=parseInt(count); if(numRows<=0) return; const currentRows=Object.keys(barisKolomExcelData).length; for(let row=currentRows;row<currentRows+numRows;row++){ if(!barisKolomExcelData[row]){ barisKolomExcelData[row]=[]; for(let col=0;col<6;col++) barisKolomExcelData[row][col]={nama1:"",nama2:"",nama3:"",nama4:"",tanggal:""}; } } saveBarisKolomExcel(); renderBarisKolomTable(); toast(`${numRows} baris ditambahkan`); };
         $("#exportExcelAllBtn").onclick=async ()=>{ let allData="DAFTAR NAMA DAN TANGGAL PER KOLOM (31 Baris):\n\n"; const kolomNames=["LIVE CHAT","WHATSAPP","DEPOSIT","FINANCE","WHITDRAW","DESIGN"]; for(let col=0;col<6;col++){ let kolomData=[]; for(let row=0;row<31;row++){ const cell=barisKolomExcelData[row]?.[col]||{nama1:"",nama2:"",nama3:"",nama4:"",tanggal:""}; const names=[cell.nama1?.trim(),cell.nama2?.trim(),cell.nama3?.trim(),cell.nama4?.trim()].filter(n=>n&&n!==""); const dateStr=cell.tanggal?.trim()||""; if(names.length>0||dateStr){ const nameStr=names.length>0?names.join(", "):"-"; const rowStr=dateStr?`${nameStr} | ${dateStr}`:nameStr; kolomData.push(`${row+1}. ${rowStr}`); } } allData+=`${kolomNames[col]}:\n`; allData+=kolomData.length>0?kolomData.join("\n"):"- (kosong)"; allData+="\n\n"; } try{ await navigator.clipboard.writeText(allData); toast("Semua data Excel dicopy (31 baris, 4 nama, 1 tanggal)"); }catch(e){ prompt("Copy manual (Ctrl+C):",allData); toast("Gagal auto copy, copy manual"); } };
       }
       function setupNamaEvents(){ $("#addNamaBtn").onclick=addNamaStaff; $("#addToBaganBtn").onclick=addToBagan; $("#exportNamaBtn").onclick=async ()=>{ const txt=namaDatabaseStore.map((s,i)=>`${i+1}. ${s.name} - ${s.divisi||"-"}`).join("\n")||"Belum ada staff dalam database"; try{ await navigator.clipboard.writeText(txt); toast("Database staff dicopy"); }catch(e){ alert(txt); toast("Gagal copy, blok manual"); } }; }
@@ -3365,7 +3011,7 @@
           tr.appendChild(tdDay); tr.appendChild(tdNames);
           body.appendChild(tr);
         });
-        body.querySelectorAll(".piket-name").forEach(el=>{ el.onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } const day=el.dataset.day; const i=Number(el.dataset.i); const old=piketStore[day][i]||""; const nm=prompt("Nama piket "+day+" slot "+(i+1)+":",old); if(nm===null) return; piketStore[day][i]=nm.trim(); savePiket(); renderPiketTable(); schedulePush(); }; });
+        body.querySelectorAll(".piket-name").forEach(el=>{ el.onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } const day=el.dataset.day; const i=Number(el.dataset.i); const old=piketStore[day][i]||""; const nm=prompt("Nama piket "+day+" slot "+(i+1)+":",old); if(nm===null) return; piketStore[day][i]=nm.trim(); savePiket(); renderPiketTable(); }; });
       }
       $("#exportPiketBtn").onclick=async ()=>{ const days=["SENIN","SELASA","RABU","KAMIS","JUMAT","SABTU","MINGGU"]; let txt=""; days.forEach(d=>{ const list=(piketStore[d]||[]).filter(n=>String(n).trim()); txt+=d+":\n"+(list.length?list.map(x=>"- "+x).join("\n"):"- (kosong)")+"\n\n"; }); try{ await navigator.clipboard.writeText(txt); toast("PIKET dicopy"); }catch(e){ alert(txt); toast("Gagal copy, blok manual"); } };
       function renderCSTable(){
@@ -3377,25 +3023,25 @@
           const tr=document.createElement("tr");
           const tdName=document.createElement("td"); tdName.className="name"; tdName.style.display="flex"; tdName.style.alignItems="center"; tdName.style.gap="10px";
           const nameSpan=document.createElement("span"); nameSpan.className="cs-name-span"; nameSpan.textContent=((idx+1)+". "+((row.name||"-").trim()||"-")); nameSpan.style.cursor="pointer"; nameSpan.title="Klik untuk copy nama"; nameSpan.onclick=async(ev)=>{ ev.stopPropagation(); const nm=(row.name||"").trim(); if(!nm){ toast("Nama kosong"); return; } const ok=await copyToClipboard(nm); if(ok) toast("Tercopy: "+nm); else{ prompt("Copy manual (CTRL+C):",nm); toast("Gagal auto copy, copy manual"); } };
-          const editBtn=document.createElement("button"); editBtn.textContent="✎"; editBtn.title="Edit nama CS"; editBtn.style.padding="6px 10px"; editBtn.style.borderRadius="10px"; editBtn.style.border="1px solid rgba(255,255,255,.16)"; editBtn.style.background="rgba(255,255,255,.06)"; editBtn.style.color="#eef2ff"; editBtn.style.cursor="pointer"; editBtn.onmouseenter=()=>editBtn.style.background="rgba(255,255,255,.10)"; editBtn.onmouseleave=()=>editBtn.style.background="rgba(255,255,255,.06)"; editBtn.onclick=(ev)=>{ ev.stopPropagation(); if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } const cur=(csStore[idx]?.name||"").trim(); const nm=prompt("Edit nama CS:",cur); if(nm===null) return; const name=nm.trim(); if(!name){ toast("Nama tidak boleh kosong"); return; } csStore[idx].name=name; saveCS(); renderCSTable(); schedulePush(); toast("Nama CS diupdate"); };
+          const editBtn=document.createElement("button"); editBtn.textContent="✎"; editBtn.title="Edit nama CS"; editBtn.style.padding="6px 10px"; editBtn.style.borderRadius="10px"; editBtn.style.border="1px solid rgba(255,255,255,.16)"; editBtn.style.background="rgba(255,255,255,.06)"; editBtn.style.color="#eef2ff"; editBtn.style.cursor="pointer"; editBtn.onmouseenter=()=>editBtn.style.background="rgba(255,255,255,.10)"; editBtn.onmouseleave=()=>editBtn.style.background="rgba(255,255,255,.06)"; editBtn.onclick=(ev)=>{ ev.stopPropagation(); if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } const cur=(csStore[idx]?.name||"").trim(); const nm=prompt("Edit nama CS:",cur); if(nm===null) return; const name=nm.trim(); if(!name){ toast("Nama tidak boleh kosong"); return; } csStore[idx].name=name; saveCS(); renderCSTable(); toast("Nama CS diupdate"); };
           tdName.appendChild(nameSpan); tdName.appendChild(editBtn);
           const tdJob=document.createElement("td"); const wrap=document.createElement("div"); wrap.className="cs-job-wrap";
           const select=document.createElement("select"); select.className="cs-job-select";
           CS_JOB_OPTIONS.forEach(opt=>{ const o=document.createElement("option"); o.value=opt.value; o.textContent=opt.label; o.setAttribute("data-color",opt.color); if(opt.value===(row.job||"")) o.selected=true; select.appendChild(o); });
           const applyJobColor=()=>{ const opt=select.options[select.selectedIndex]; const color=opt.getAttribute("data-color")||"#202741"; select.style.background=color; const dark=isDark(color); select.style.color=dark?"#eef2ff":"#0b0f1d"; };
           applyJobColor();
-          select.onchange=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); renderCSTable(); return; } csStore[idx].job=select.value; saveCS(); applyJobColor(); schedulePush(); toast("Jobdesk diubah"); };
+          select.onchange=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); renderCSTable(); return; } csStore[idx].job=select.value; saveCS(); applyJobColor(); toast("Jobdesk diubah"); };
           wrap.appendChild(select); tdJob.appendChild(wrap);
           const tdAct=document.createElement("td");
           const offBtn=document.createElement("button"); offBtn.className="btn-green"; offBtn.textContent="→ OFFDAY"; offBtn.style.marginRight="6px";
-          offBtn.onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } const tgl=prompt("Masukkan tanggal OFFDAY (YYYY-MM-DD):",ymd(new Date())); if(!tgl) return; ensureDay(tgl); if(store[tgl].blocked){ toast("Tanggal diblokir"); return; } const slot=store[tgl].entries.find(e=>!(e.name||"").trim()); if(!slot){ toast("Slot OFFDAY penuh (maks 10)"); return; } slot.name=row.name||""; slot.role=row.job||""; store[tgl].type="OFF"; store[tgl].off=true; saveStore(); renderCalendar(); schedulePush(); toast((row.name||"CS")+" masuk OFFDAY "+tgl); };
-          const del=document.createElement("button"); del.className="cs-del-btn"; del.textContent="HAPUS"; del.onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } if(confirm("Hapus CS ini?")){ const deleted=csStore[idx]; csStore.splice(idx,1); saveCS(); renderCSTable(); schedulePush(); logDelete('HAPUS_CS',`Nama: ${deleted.name}, Job: ${deleted.job}`); toast(`CS dihapus oleh ADMIN`); } };
+          offBtn.onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } const tgl=prompt("Masukkan tanggal OFFDAY (YYYY-MM-DD):",ymd(new Date())); if(!tgl) return; ensureDay(tgl); if(store[tgl].blocked){ toast("Tanggal diblokir"); return; } const slot=store[tgl].entries.find(e=>!(e.name||"").trim()); if(!slot){ toast("Slot OFFDAY penuh (maks 10)"); return; } slot.name=row.name||""; slot.role=row.job||""; store[tgl].type="OFF"; store[tgl].off=true; saveStore(); renderCalendar(); toast((row.name||"CS")+" masuk OFFDAY "+tgl); };
+          const del=document.createElement("button"); del.className="cs-del-btn"; del.textContent="HAPUS"; del.onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } if(confirm("Hapus CS ini?")){ csStore.splice(idx,1); saveCS(); renderCSTable(); toast(`CS dihapus oleh ADMIN`); } };
           tdAct.appendChild(offBtn); tdAct.appendChild(del);
           tr.appendChild(tdName); tr.appendChild(tdJob); tr.appendChild(tdAct);
           body.appendChild(tr);
         });
       }
-      $("#addCsBtn").onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } const nm=prompt("Masukkan nama CS:",""); if(nm===null) return; const name=nm.trim(); if(!name){ toast("Nama tidak boleh kosong"); return; } csStore.push({name,job:""}); saveCS(); renderCSTable(); schedulePush(); toast("CS ditambahkan"); };
+      $("#addCsBtn").onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa edit."); return; } const nm=prompt("Masukkan nama CS:",""); if(nm===null) return; const name=nm.trim(); if(!name){ toast("Nama tidak boleh kosong"); return; } csStore.push({name,job:""}); saveCS(); renderCSTable(); toast("CS ditambahkan"); };
       $("#exportCsBtn").onclick=async ()=>{ const txt=csStore.map((r,i)=>`${i+1}. ${r.name} — ${r.job||"-"}`).join("\n")||"Belum ada data CS"; try{ await navigator.clipboard.writeText(txt); toast("CS dicopy"); }catch(e){ alert(txt); toast("Gagal copy, blok manual"); } };
       function renderCatatanList() {
         const container = $("#catatanList");
@@ -3408,8 +3054,8 @@
         container.querySelectorAll(".catatan-btn.delete").forEach(btn=>{ btn.addEventListener("click",(e)=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa hapus."); return; } const idx=parseInt(e.target.dataset.index); deleteCatatan(idx); }); });
       }
       function editCatatan(idx){ if(idx<0||idx>=catatanStore.length) return; const catatan=catatanStore[idx]; editingCatatanIndex=idx; $("#catatanTitle").value=catatan.title||""; $("#catatanCategory").value=catatan.category||""; $("#catatanContent").value=catatan.content||""; $("#catatanForm button[type='submit']").innerHTML='<i class="fas fa-save"></i> Update Catatan'; }
-      function deleteCatatan(idx){ if(isLocked){ toast("Terkunci. Hanya bos yang bisa hapus."); return; } if(confirm("Hapus catatan ini?")){ const deleted=catatanStore[idx]; catatanStore.splice(idx,1); saveCatatan(); renderCatatanList(); schedulePush(); logDelete('HAPUS_CATATAN',`Judul: ${deleted.title}, Kategori: ${deleted.category}`); toast(`Catatan dihapus oleh ADMIN`); } }
-      function setupCatatanForm(){ const form=$("#catatanForm"); if(!form) return; form.addEventListener("submit",(e)=>{ e.preventDefault(); if(isLocked){ toast("Terkunci. Hanya bos yang bisa tambah catatan."); return; } const title=$("#catatanTitle").value.trim(); const category=$("#catatanCategory").value; const content=$("#catatanContent").value.trim(); if(!title||!category||!content){ toast("Harap isi semua field!"); return; } const now=new Date(); const dateStr=`${now.getDate()} ${MONTHS_ID[now.getMonth()]} ${now.getFullYear()}`; const newCatatan={title,category,content,date:dateStr}; if(editingCatatanIndex!==null){ catatanStore[editingCatatanIndex]=newCatatan; toast("Catatan diupdate"); } else{ catatanStore.push(newCatatan); toast("Catatan ditambahkan"); } saveCatatan(); renderCatatanList(); schedulePush(); form.reset(); editingCatatanIndex=null; $("#catatanForm button[type='submit']").innerHTML='<i class="fas fa-plus"></i> Simpan Catatan'; }); }
+      function deleteCatatan(idx){ if(isLocked){ toast("Terkunci. Hanya bos yang bisa hapus."); return; } if(confirm("Hapus catatan ini?")){ catatanStore.splice(idx,1); saveCatatan(); renderCatatanList(); toast(`Catatan dihapus oleh ADMIN`); } }
+      function setupCatatanForm(){ const form=$("#catatanForm"); if(!form) return; form.addEventListener("submit",(e)=>{ e.preventDefault(); if(isLocked){ toast("Terkunci. Hanya bos yang bisa tambah catatan."); return; } const title=$("#catatanTitle").value.trim(); const category=$("#catatanCategory").value; const content=$("#catatanContent").value.trim(); if(!title||!category||!content){ toast("Harap isi semua field!"); return; } const now=new Date(); const dateStr=`${now.getDate()} ${MONTHS_ID[now.getMonth()]} ${now.getFullYear()}`; const newCatatan={title,category,content,date:dateStr}; if(editingCatatanIndex!==null){ catatanStore[editingCatatanIndex]=newCatatan; toast("Catatan diupdate"); } else{ catatanStore.push(newCatatan); toast("Catatan ditambahkan"); } saveCatatan(); renderCatatanList(); form.reset(); editingCatatanIndex=null; $("#catatanForm button[type='submit']").innerHTML='<i class="fas fa-plus"></i> Simpan Catatan'; }); }
       $("#addCatatanBtn").onclick=()=>{ if(isLocked){ toast("Terkunci. Hanya bos yang bisa tambah catatan."); return; } $("#catatanForm").reset(); editingCatatanIndex=null; $("#catatanForm button[type='submit']").innerHTML='<i class="fas fa-plus"></i> Simpan Catatan'; $("#catatanTitle").focus(); };
       $("#exportCatatanBtn").onclick=async ()=>{ if(catatanStore.length===0){ toast("Belum ada catatan untuk diexport"); return; } const txt=catatanStore.map((c,i)=>`${i+1}. ${c.title}\nKategori: ${c.category}\nTanggal: ${c.date}\n${c.content}\n`).join("\n---\n\n"); try{ await navigator.clipboard.writeText(txt); toast("Catatan dicopy ke clipboard"); }catch(e){ alert(txt); toast("Gagal copy, blok manual"); } };
       function setActiveTab(type){
@@ -3429,7 +3075,7 @@
       const prev=()=>{view.setMonth(view.getMonth()-1); renderCalendar();}; const next=()=>{view.setMonth(view.getMonth()+1); renderCalendar();};
       $("#prev").onclick=$("#prevMini").onclick=prev; $("#next").onclick=$("#nextMini").onclick=next; $("#todayBtn").onclick=()=>{view=new Date(); renderCalendar();};
       $("#jumpYear").onclick=()=>{ const y=prompt("Masukkan tahun (contoh 2026):", view.getFullYear()); if(!y) return; view.setFullYear(Number(y)); renderCalendar(); };
-      $("#clearBlockedOnly").onclick=()=>{ if(isLocked){ toast("Terkunci. Tidak bisa hapus."); return; } const md=getMonthData(view); const prefix=md.y+"-"+String(md.m+1).padStart(2,"0"); let deletedDates=[]; Object.keys(store).forEach(k=>{ if(k.startsWith(prefix) && store[k].blocked){ deletedDates.push(k); delete store[k]; } }); if(deletedDates.length===0){ toast("Tidak ada tanggal blocked"); return; } saveStore(); renderCalendar(); schedulePush(); logDelete('HAPUS_BLOCKED_DATE',`Tanggal: ${deletedDates.join(', ')}`); toast(deletedDates.length+" tanggal blocked dihapus oleh ADMIN"); };
+      $("#clearBlockedOnly").onclick=()=>{ if(isLocked){ toast("Terkunci. Tidak bisa hapus."); return; } const md=getMonthData(view); const prefix=md.y+"-"+String(md.m+1).padStart(2,"0"); let deletedDates=[]; Object.keys(store).forEach(k=>{ if(k.startsWith(prefix) && store[k].blocked){ deletedDates.push(k); delete store[k]; } }); if(deletedDates.length===0){ toast("Tidak ada tanggal blocked"); return; } saveStore(); renderCalendar(); toast(deletedDates.length+" tanggal blocked dihapus oleh ADMIN"); };
       function parseNamesFromPaste(text){ return text.split(/\r?\n|\t|,|;/g).map(s=>s.trim()).filter(Boolean); }
       function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
       function normalizeName(n){ return (n||"").trim().toLowerCase(); }
@@ -3441,7 +3087,7 @@
         let rawNames=parseNamesFromPaste(pasted);
         if(rawNames.length===0){ toast("Tidak ada nama terdeteksi"); return; }
         const md=getMonthData(view); const y=md.y,m=md.m,daysInMonth=md.daysInMonth;
-        for(let d=1;d<=daysInMonth;d++){ const key=ymd(new Date(y,m,d)); if(store[key]){ saveToUndoStack(); break; } }
+        for(let d=1;d<=daysInMonth;d++){ const key=ymd(new Date(y,m,d)); if(store[key]){ break; } }
         const toggleByName={},namesP1=[],namesP2=[];
         for(const nm of rawNames){ const key=normalizeName(nm); if(!(key in toggleByName)) toggleByName[key]=0; if(toggleByName[key]===0){ namesP1.push(nm); toggleByName[key]=1; } else{ namesP2.push(nm); toggleByName[key]=0; } }
         const listP1=shuffle(namesP1),listP2=shuffle(namesP2);
@@ -3450,7 +3096,7 @@
         for(let d=1;d<=daysInMonth2;d++){ const key=ymd(new Date(y2,m2,d)); ensureDay(key); if(store[key]?.blocked) continue; (d<=15?eligibleP1:eligibleP2).push(key); }
         function fillPeriod(namesList,eligibleKeys){ let idx=0,filled=0; while(idx<namesList.length){ const roundKeys=shuffle(eligibleKeys); let any=false; for(const key of roundKeys){ if(idx>=namesList.length) break; ensureDay(key); const slot=store[key].entries.find(e=>!(e.name||"").trim()); if(slot){ slot.name=namesList[idx]; slot.role=getCsJobForName(namesList[idx]); store[key].type="OFF"; store[key].off=true; idx++; filled++; any=true; } } if(!any) break; } return {filled:filled,remaining:namesList.length-idx}; }
         const r1=fillPeriod(listP1,eligibleP1); const r2=fillPeriod(listP2,eligibleP2);
-        saveStore(); renderCalendar(); schedulePush();
+        saveStore(); renderCalendar();
         toast("P1 masuk "+r1.filled+" | P2 masuk "+r2.filled+" | 10 slot per tanggal");
       }
       $("#bulkImport").onclick=bulkImportNames;
@@ -3458,16 +3104,13 @@
       document.addEventListener('keydown',(e)=>{ if(e.key==='Shift') isShiftPressed=true; });
       document.addEventListener('keyup',(e)=>{ if(e.key==='Shift') isShiftPressed=false; });
       document.addEventListener('wheel',(e)=>{ if(isShiftPressed){ e.preventDefault(); const activePanels=[document.querySelector('.app'),document.querySelector('#grid'),document.querySelector('.bagan-wrap'),document.querySelector('.cuti-table-wrap'),document.querySelector('.cs-wrap'),document.querySelector('.catatan-container'),document.querySelector('.excel-table-container')]; activePanels.forEach(panel=>{ if(panel&&panel.offsetParent!==null){ panel.scrollLeft+=e.deltaY*2; } }); toast(`📜 Geser ${e.deltaY>0?'kanan':'kiri'} (Shift + Scroll)`); } },{passive:false});
-      (function(){ const originalLog=console.log; const originalWarn=console.warn; const originalError=console.error; const originalInfo=console.info; console.log=function(...args){ const message=args.join(' '); if(!message.includes('Console Assets Shortcuts')&&!message.includes('assets shortcuts')&&!message.includes('assets-shortcuts')) originalLog.apply(console,args); }; console.warn=function(...args){ const message=args.join(' '); if(!message.includes('Console Assets Shortcuts')&&!message.includes('assets shortcuts')&&!message.includes('assets-shortcuts')) originalWarn.apply(console,args); }; console.error=function(...args){ const message=args.join(' '); if(!message.includes('Console Assets Shortcuts')&&!message.includes('assets shortcuts')&&!message.includes('assets-shortcuts')) originalError.apply(console,args); }; console.info=function(...args){ const message=args.join(' '); if(!message.includes('Console Assets Shortcuts')&&!message.includes('assets shortcuts')&&!message.includes('assets-shortcuts')) originalInfo.apply(console,args); }; setTimeout(()=>{ console.clear(); console.log("✅ MAWARTOTO - Jadwal Offday System (Permanen - Merge)"); console.log("🛡️  Data tidak akan hilang otomatis karena sinkronisasi MERGE"); console.log("💾 Gunakan tombol Backup dan Restore untuk keamanan ekstra"); console.log("📱 Gunakan Shift + Scroll mouse untuk geser horizontal"); console.log("↶ Gunakan Ctrl+Z untuk undo, Ctrl+Y untuk redo"); },1000); })();
+      (function(){ const originalLog=console.log; const originalWarn=console.warn; const originalError=console.error; const originalInfo=console.info; console.log=function(...args){ const message=args.join(' '); if(!message.includes('Console Assets Shortcuts')&&!message.includes('assets shortcuts')&&!message.includes('assets-shortcuts')) originalLog.apply(console,args); }; console.warn=function(...args){ const message=args.join(' '); if(!message.includes('Console Assets Shortcuts')&&!message.includes('assets shortcuts')&&!message.includes('assets-shortcuts')) originalWarn.apply(console,args); }; console.error=function(...args){ const message=args.join(' '); if(!message.includes('Console Assets Shortcuts')&&!message.includes('assets shortcuts')&&!message.includes('assets-shortcuts')) originalError.apply(console,args); }; console.info=function(...args){ const message=args.join(' '); if(!message.includes('Console Assets Shortcuts')&&!message.includes('assets shortcuts')&&!message.includes('assets-shortcuts')) originalInfo.apply(console,args); }; setTimeout(()=>{ console.clear(); console.log("✅ MAWARTOTO - Jadwal Offday System (Permanen - No Auto Sync)"); console.log("💾 Data hanya disimpan di localStorage, tidak ada perubahan otomatis"); console.log("📱 Gunakan Shift + Scroll mouse untuk geser horizontal"); },1000); })();
       function createFallingStars(){ const container=document.createElement('div'); container.className='falling-stars'; for(let i=0;i<15;i++){ const star=document.createElement('div'); const isMoon=Math.random()>0.7; star.className=`falling-star ${isMoon?'moon':'star'}`; const size=isMoon?Math.random()*15+10:Math.random()*8+5; const left=Math.random()*100; const duration=Math.random()*10+15; const delay=Math.random()*10; Object.assign(star.style,{width:`${size}px`,height:`${size}px`,left:`${left}vw`,top:'-100px',animation:`fallingStar ${duration}s linear infinite`,animationDelay:`${delay}s`,opacity:'0'}); container.appendChild(star); } document.body.appendChild(container); }
       function createFloatingRoses(){ const container=document.createElement('div'); container.className='floating-roses'; for(let i=0;i<8;i++){ const rose=document.createElement('div'); const sizes=['large','medium','small']; const size=sizes[i%3]; rose.className=`floating-rose ${size}`; const left=Math.random()*100; const duration=Math.random()*10+20; const delay=Math.random()*15; Object.assign(rose.style,{left:`${left}vw`,animation:`floatRose ${duration}s linear infinite`,animationDelay:`${delay}s`}); container.appendChild(rose); } document.body.appendChild(container); }
       function createStarfield(){ const starsContainer=document.createElement('div'); starsContainer.className='starfield'; starsContainer.style.cssText=`position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:-3;`; for(let i=0;i<100;i++){ const star=document.createElement('div'); const size=Math.random()*2+1; const left=Math.random()*100; const top=Math.random()*100; const opacity=Math.random()*0.5+0.2; const twinkleDelay=Math.random()*5; star.style.cssText=`position:absolute;width:${size}px;height:${size}px;background:rgba(255,255,255,${opacity});border-radius:50%;left:${left}vw;top:${top}vh;box-shadow:0 0 ${size*2}px rgba(255,255,255,${opacity*0.5});animation:twinkle ${Math.random()*3+2}s ease-in-out infinite;animation-delay:${twinkleDelay}s;`; starsContainer.appendChild(star); } document.body.appendChild(starsContainer); }
       const style=document.createElement('style'); style.textContent=`@keyframes twinkle{0%,100%{opacity:0.2;transform:scale(1);}50%{opacity:1;transform:scale(1.1);}}`; document.head.appendChild(style);
       function initVisualEffects(){ createStarfield(); createFloatingRoses(); createFallingStars(); document.querySelectorAll('.panel').forEach(panel=>{ panel.style.transition='transform 0.3s ease, box-shadow 0.3s ease'; panel.addEventListener('mouseenter',()=>{ if(window.innerWidth>768){ panel.style.transform='translateY(-5px)'; panel.style.boxShadow='0 25px 70px rgba(0,0,0,0.6)'; } }); panel.addEventListener('mouseleave',()=>{ panel.style.transform='translateY(0)'; panel.style.boxShadow='var(--shadow)'; }); }); document.querySelectorAll('#topTabs .tab-btn').forEach(tab=>{ tab.addEventListener('click',function(e){ const ripple=document.createElement('span'); const rect=this.getBoundingClientRect(); const size=Math.max(rect.width,rect.height); const x=e.clientX-rect.left-size/2; const y=e.clientY-rect.top-size/2; ripple.style.cssText=`position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);transform:scale(0);animation:ripple 0.6s linear;width:${size}px;height:${size}px;left:${x}px;top:${y}px;pointer-events:none;`; this.appendChild(ripple); setTimeout(()=>{ ripple.remove(); },600); }); }); const rippleStyle=document.createElement('style'); rippleStyle.textContent=`@keyframes ripple{to{transform:scale(4);opacity:0;}}`; document.head.appendChild(rippleStyle); }
       let resizeTimer; window.addEventListener('resize',()=>{ clearTimeout(resizeTimer); resizeTimer=setTimeout(()=>{ document.querySelectorAll('.falling-stars,.floating-roses,.starfield').forEach(el=>{ if(el.parentNode) el.parentNode.removeChild(el); }); if(window.innerWidth>480) initVisualEffects(); },250); });
-      document.addEventListener('keydown',function(e){ if((e.ctrlKey||e.metaKey)&&!e.altKey){ if(e.key==='z'||e.key==='Z'){ e.preventDefault(); if(activeFilterType==="BAGAN_VIEW"){ if(e.shiftKey) redoBagan(); else undoBagan(); } else{ if(e.shiftKey) redo(); else undo(); } } else if(e.key==='y'||e.key==='Y'){ e.preventDefault(); if(activeFilterType==="BAGAN_VIEW") redoBagan(); else redo(); } } });
-      $("#undoBtn").onclick=()=>{ if(activeFilterType==="BAGAN_VIEW") undoBagan(); else undo(); };
-      $("#redoBtn").onclick=()=>{ if(activeFilterType==="BAGAN_VIEW") redoBagan(); else redo(); };
       function startApp() {
         updateLockUI();
         initTopTabs();
@@ -3480,13 +3123,7 @@
         setupCatatanForm();
         setupExcelEvents();
         setupNamaEvents();
-        startRealtimeSync();
         setTimeout(initVisualEffects,500);
-        setTimeout(()=>{ dbRef.once("value").then(snap=>{ if(!snap.exists()) pushNow(); }).catch(()=>{}); },500);
-        updateUndoRedoButtons();
-        // Pasang event backup & restore
-        $("#backupDataBtn").onclick = backupAllData;
-        $("#restoreDataBtn").onclick = restoreAllData;
       }
       window.addEventListener("load", () => { showInitialPasswordModal(); });
     })();
@@ -3506,7 +3143,6 @@
 <style>
 body { font-family: Arial, sans-serif; color: #000000ff; background-color: #000000ff; margin: 0px !important; cursor: url('https://mawartoto-is-back.b-cdn.net/kursor-mwtt.png'), auto; }
 #content .panel-heading center h2{ display: none; }
-/* ... sisanya sama seperti kode asli ... */
 </style>
 
 <div class="popup-overlay" id="popupOverlay">
