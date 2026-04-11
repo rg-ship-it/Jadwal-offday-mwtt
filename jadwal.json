@@ -1,0 +1,68 @@
+{
+  "meta": {
+    "version": "1.0",
+    "updated_at": "2026-04-11T08:00:00"
+  },
+  "employees": [
+    {
+      "id": 1,
+      "nama": "Maul",
+      "divisi": "Admin",
+      "status": "offday"
+    },
+    {
+      "id": 2,
+      "nama": "Rina",
+      "divisi": "CS",
+      "status": "masuk"
+    }
+  ],
+  "offday": {
+    "today": ["Maul", "Budi"],
+    "tomorrow": ["Rina"]
+  },
+  "cuti": [
+    {
+      "id": 101,
+      "nama": "Dina",
+      "mulai": "2026-04-11",
+      "selesai": "2026-04-13",
+      "jenis": "cuti tahunan",
+      "info": "Acara keluarga",
+      "status": "disetujui"
+    }
+  ],
+  "shift": [
+    {
+      "nama": "Rina",
+      "tanggal": "2026-04-11",
+      "jam_masuk": "08:00",
+      "jam_pulang": "16:00"
+    }
+  ],
+  "piket": [
+    {
+      "hari": "Senin",
+      "nama": "Budi",
+      "tugas": "Buang sampah"
+    }
+  ],
+  "bagan": [
+    {
+      "divisi": "LIVE CHAT",
+      "slot": ["Maul", "Rina", "", ""]
+    }
+  ],
+  "catatan": [
+    {
+      "nama": "Andi",
+      "kategori": "DI BAWAH 3 BULAN",
+      "keterangan": "Perlu monitoring"
+    }
+  ],
+  "stats": {
+    "total_karyawan": 25,
+    "offday_hari_ini": 2,
+    "cuti_aktif": 1
+  }
+}
